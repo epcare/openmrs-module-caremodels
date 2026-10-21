@@ -260,6 +260,42 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 	}
 	
 	@Test
+	public void shouldDenyWorkspaceForSuspendedMembership() throws Exception {
+		org.openmrs.Patient patient = createTestPatient();
+		CareModel model = enrolledPublishedModel("ACCESS_SUSPENDED", patient);
+		CareModelMember member = memberService.getCurrentMember(patient.getPatientId(), model.getId());
+		member.setStatus(MemberStatus.SUSPENDED);
+		memberService.saveMember(member);
+
+		try {
+			accessService.authorizeWorkspace(patient.getUuid(), model.getCode(), "overview");
+			Assert.fail("suspended memberships must not authorize a workspace");
+		}
+		catch (APIException e) {
+			Assert.assertTrue(e.getMessage().contains("No active membership"));
+		}
+	}
+
+	@Test
+	public void shouldAuthorizeClinicianWithoutModelManagementPrivilege() throws Exception {
+		org.openmrs.Patient patient = createTestPatient();
+		CareModel model = enrolledPublishedModel("ACCESS_CLINICIAN", patient);
+
+		User clinician = createUser("accessclinician", CareModelsPrivileges.VIEW_CARE_MODELS, modelPrivilege(),
+		    "View Patients", "Get Patients");
+		Context.authenticate(clinician.getUsername(), "Test1234!");
+		try {
+			Assert.assertFalse(Context.hasPrivilege(CareModelsPrivileges.MANAGE_CARE_MODELS));
+			CareModelAccessService.AuthorizedAccess access = accessService.authorizeWorkspace(patient.getUuid(),
+			    model.getCode(), "overview");
+			Assert.assertEquals("overview", access.getTabDefinition().path("id").asText());
+		}
+		finally {
+			Context.authenticate("admin", System.getProperty("junit.password", "test"));
+		}
+	}
+
+	@Test
 	public void shouldFailClosedForUnknownPatient() {
 		try {
 			accessService.getAuthorizedMemberships("00000000-0000-0000-0000-000000000000");

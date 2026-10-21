@@ -179,8 +179,8 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 	@Override
 	@Transactional
 	public CareModel saveDraft(String code, String definitionJson, Integer expectedRevision) throws APIException {
-		CareModel model = getExistingModelByCode(code);
 		assertDefinitionValid(definitionJson);
+		CareModel model = getExistingModelByCodeForUpdate(code);
 		
 		StorageEnvelope envelope = readEnvelope(model);
 		try {
@@ -220,7 +220,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 			throw new APIException("Publishing requires the " + CareModelsPrivileges.PUBLISH_CARE_MODELS + " privilege");
 		}
 		
-		CareModel model = getExistingModelByCode(code);
+		CareModel model = getExistingModelByCodeForUpdate(code);
 		
 		// MOD-007: a model whose required privilege is unregistered cannot publish
 		assertPrivilegePresent(model.getPrivilege());
@@ -372,6 +372,17 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		return model;
 	}
 	
+	private CareModel getExistingModelByCodeForUpdate(String code) {
+		if (code == null) {
+			throw new APIException("Care Model code is required");
+		}
+		CareModel model = dao.getCareModelByCodeForUpdate(code);
+		if (model == null) {
+			throw new APIException("No Care Model with code '" + code + "'");
+		}
+		return model;
+	}
+
 	private StorageEnvelope readEnvelope(CareModel model) {
 		return StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
 	}

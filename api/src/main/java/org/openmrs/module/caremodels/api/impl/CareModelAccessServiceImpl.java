@@ -9,7 +9,6 @@
  */
 package org.openmrs.module.caremodels.api.impl;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,8 +23,8 @@ import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.module.caremodels.api.CareModelAccessService;
 import org.openmrs.module.caremodels.api.CareModelMemberService;
-import org.openmrs.module.caremodels.api.CareModelService;
 import org.openmrs.module.caremodels.api.db.CareModelDAO;
+import org.openmrs.module.caremodels.config.StorageEnvelope;
 import org.openmrs.module.caremodels.dto.CareModelMembershipDTO;
 import org.openmrs.module.caremodels.dto.CareModelRef;
 import org.openmrs.module.caremodels.model.CareModel;
@@ -159,24 +158,23 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		}
 		
 		CareModelMember member = memberService.getCurrentMember(patient.getPatientId(), model.getId());
-		if (member == null || member.getVoided()) {
+		if (member == null || member.getVoided() || member.getStatus() != CareModelMember.MemberStatus.ACTIVE) {
 			throw new APIException("No active membership in this Care Model");
 		}
 		
 		// only now is the published definition loaded, and only for this model
-		CareModelService modelService = Context.getService(CareModelService.class);
-		String publishedJson = modelService.getPublishedDefinition(model.getCode());
-		if (publishedJson == null) {
+		StorageEnvelope envelope;
+		try {
+			envelope = StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
+		}
+		catch (IllegalStateException e) {
+			throw new APIException("Stored Care Model envelope is not valid JSON", e);
+		}
+		if (envelope.getPublished() == null || envelope.getPublished().getDefinition() == null) {
 			throw new APIException("Care Model not found or not authorized");
 		}
-		
-		JsonNode published;
-		try {
-			published = objectMapper.readTree(publishedJson);
-		}
-		catch (IOException e) {
-			throw new APIException("Stored definition is not valid JSON", e);
-		}
+
+		JsonNode published = envelope.getPublished().getDefinition();
 		
 		JsonNode workspaceNode = published.path("workspace");
 		String resolvedTabId = tabId;

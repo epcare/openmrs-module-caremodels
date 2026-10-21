@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.hibernate.Criteria;
+import org.hibernate.LockMode;
 import org.openmrs.api.db.hibernate.DbSessionFactory;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Order;
@@ -63,6 +64,12 @@ public class HibernateCareModelDAO implements CareModelDAO {
 		        .add(Restrictions.eq("code", code)).uniqueResult();
 	}
 	
+	@Override
+	public CareModel getCareModelByCodeForUpdate(String code) {
+		return (CareModel) sessionFactory.getCurrentSession().createCriteria(CareModel.class)
+		        .add(Restrictions.eq("code", code)).setLockMode(LockMode.PESSIMISTIC_WRITE).uniqueResult();
+	}
+
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<CareModel> getCareModels(String qStr, CareModelStatus status, boolean includeRetired, Integer startIndex,

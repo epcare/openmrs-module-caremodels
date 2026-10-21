@@ -32,6 +32,13 @@ public interface CareModelDAO {
 	CareModel getCareModelByCode(String code);
 	
 	/**
+	 * Loads a model while holding a database write lock for the remainder of the current
+	 * transaction. Draft and publish operations use this method so the envelope revision check and
+	 * subsequent write form one atomic compare-and-swap operation.
+	 */
+	CareModel getCareModelByCodeForUpdate(String code);
+
+	/**
 	 * Search/filter the model registry. Excludes the {@code configuration} envelope.
 	 * 
 	 * @param qStr free-text match on name/code
