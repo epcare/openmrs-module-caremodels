@@ -254,6 +254,12 @@ public class CareModelEnrollmentServiceTest {
 		}
 
 		@Override
+		public List<CareModel> getPublishedCareModelsForEnrollment() {
+			return model == null ? java.util.Collections.<CareModel> emptyList()
+			        : java.util.Collections.singletonList(model);
+		}
+
+		@Override
 		public long getCareModelsCount(String qStr, CareModelStatus status, boolean includeRetired) {
 			return 0;
 		}
