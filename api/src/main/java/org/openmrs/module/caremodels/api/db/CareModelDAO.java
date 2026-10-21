@@ -26,6 +26,9 @@ public interface CareModelDAO {
 	CareModel saveCareModel(CareModel careModel);
 	
 	CareModel getCareModelById(Integer id);
+
+	/** Locks one model row to serialize membership episode creation for that model. */
+	CareModel getCareModelByIdForUpdate(Integer id);
 	
 	CareModel getCareModelByUuid(String uuid);
 	

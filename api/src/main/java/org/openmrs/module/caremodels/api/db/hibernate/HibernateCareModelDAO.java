@@ -51,6 +51,12 @@ public class HibernateCareModelDAO implements CareModelDAO {
 	public CareModel getCareModelById(Integer id) {
 		return (CareModel) sessionFactory.getCurrentSession().get(CareModel.class, id);
 	}
+
+	@Override
+	public CareModel getCareModelByIdForUpdate(Integer id) {
+		return (CareModel) sessionFactory.getCurrentSession().createCriteria(CareModel.class)
+		        .add(Restrictions.idEq(id)).setLockMode(LockMode.PESSIMISTIC_WRITE).uniqueResult();
+	}
 	
 	@Override
 	public CareModel getCareModelByUuid(String uuid) {

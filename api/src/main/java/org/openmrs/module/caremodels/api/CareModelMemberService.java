@@ -62,6 +62,7 @@ public interface CareModelMemberService extends OpenmrsService {
 	 * episode exists; the database unique index is the final concurrency backstop.
 	 */
 	@Transactional
+	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
 	CareModelMember saveMember(CareModelMember member) throws APIException;
 	
 	/** Manual episode transition (e.g. suspend, complete, withdraw) with a required audited reason. */

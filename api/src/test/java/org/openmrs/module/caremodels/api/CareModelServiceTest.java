@@ -30,6 +30,7 @@ public class CareModelServiceTest extends BaseModuleContextSensitiveTest {
 	public void shouldLoadCareModelService() {
 		Assert.assertNotNull(service);
 		Assert.assertNotNull(Context.getService(CareModelMemberService.class));
+		Assert.assertNotNull(Context.getService(CareModelEnrollmentService.class));
 	}
 	
 	@Test(expected = Exception.class)
