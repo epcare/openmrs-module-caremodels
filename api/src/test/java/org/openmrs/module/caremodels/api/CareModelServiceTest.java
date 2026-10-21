@@ -13,6 +13,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.caremodels.event.ClinicalChangeListener;
 import org.openmrs.module.caremodels.model.CareModel;
 import org.openmrs.module.caremodels.model.CareModel.CareModelStatus;
 import org.openmrs.test.BaseModuleContextSensitiveTest;
@@ -31,6 +32,8 @@ public class CareModelServiceTest extends BaseModuleContextSensitiveTest {
 		Assert.assertNotNull(service);
 		Assert.assertNotNull(Context.getService(CareModelMemberService.class));
 		Assert.assertNotNull(Context.getService(CareModelEnrollmentService.class));
+		Assert.assertNotNull(Context.getRegisteredComponent("caremodels.ClinicalChangeEnrollmentProcessor",
+		    ClinicalChangeListener.class));
 	}
 	
 	@Test(expected = Exception.class)

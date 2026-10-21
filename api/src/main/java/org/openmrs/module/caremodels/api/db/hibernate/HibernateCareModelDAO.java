@@ -90,6 +90,14 @@ public class HibernateCareModelDAO implements CareModelDAO {
 		criteria.addOrder(Order.asc("name"));
 		return criteria.list();
 	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public List<CareModel> getPublishedCareModelsForEnrollment() {
+		return sessionFactory.getCurrentSession().createCriteria(CareModel.class)
+		        .add(Restrictions.eq("status", CareModelStatus.PUBLISHED)).add(Restrictions.eq("retired", false))
+		        .addOrder(Order.asc("careModelId")).list();
+	}
 	
 	@Override
 	public long getCareModelsCount(String qStr, CareModelStatus status, boolean includeRetired) {

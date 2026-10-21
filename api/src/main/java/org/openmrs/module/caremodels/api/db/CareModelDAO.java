@@ -50,6 +50,9 @@ public interface CareModelDAO {
 	 */
 	List<CareModel> getCareModels(String qStr, CareModelStatus status, boolean includeRetired, Integer startIndex,
 	        Integer limit);
+
+	/** Published, non-retired models whose definitions may react to a clinical change. */
+	List<CareModel> getPublishedCareModelsForEnrollment();
 	
 	long getCareModelsCount(String qStr, CareModelStatus status, boolean includeRetired);
 	

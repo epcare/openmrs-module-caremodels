@@ -17,13 +17,14 @@ import org.openmrs.api.OpenmrsService;
 import org.openmrs.module.caremodels.model.CareModelMember;
 import org.openmrs.module.caremodels.rule.EnrollmentRuleEngine.Action;
 import org.openmrs.module.caremodels.security.CareModelsPrivileges;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Transactional, idempotent entry points for every supported membership enrollment flow. */
 public interface CareModelEnrollmentService extends OpenmrsService {
 
 	/** Applies a validated published rule decision. Replaying the same source UUID is a no-op. */
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	CareModelMember applyRuleEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
 	        String sourceUuid, Date asOf) throws APIException;
 
