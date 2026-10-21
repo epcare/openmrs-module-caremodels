@@ -117,6 +117,7 @@ public class WorkspaceResource extends DelegatingCrudResource<WorkspaceTab> {
 		description.addProperty("tabId");
 		description.addProperty("tabLabel");
 		if (representation instanceof DefaultRepresentation) {
+			description.addProperty("tabs");
 			description.addProperty("widgets");
 			description.addProperty("layouts");
 		}

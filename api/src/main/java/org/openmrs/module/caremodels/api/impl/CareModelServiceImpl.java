@@ -25,6 +25,7 @@ import org.openmrs.module.caremodels.config.JsonSchemaValidator;
 import org.openmrs.module.caremodels.config.OpenmrsReferenceChecker;
 import org.openmrs.module.caremodels.config.SemanticValidator;
 import org.openmrs.module.caremodels.config.StorageEnvelope;
+import org.openmrs.module.caremodels.config.StorageEnvelopeValidator;
 import org.openmrs.module.caremodels.config.StaleRevisionException;
 import org.openmrs.module.caremodels.config.ValidationResult;
 import org.openmrs.module.caremodels.model.CareModel;
@@ -179,8 +180,8 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 	@Override
 	@Transactional
 	public CareModel saveDraft(String code, String definitionJson, Integer expectedRevision) throws APIException {
-		CareModel model = getExistingModelByCode(code);
 		assertDefinitionValid(definitionJson);
+		CareModel model = getExistingModelByCodeForUpdate(code);
 		
 		StorageEnvelope envelope = readEnvelope(model);
 		try {
@@ -220,7 +221,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 			throw new APIException("Publishing requires the " + CareModelsPrivileges.PUBLISH_CARE_MODELS + " privilege");
 		}
 		
-		CareModel model = getExistingModelByCode(code);
+		CareModel model = getExistingModelByCodeForUpdate(code);
 		
 		// MOD-007: a model whose required privilege is unregistered cannot publish
 		assertPrivilegePresent(model.getPrivilege());
@@ -309,6 +310,10 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		}
 		
 		StorageEnvelope envelope = StorageEnvelope.fromJson(objectMapper, envelopeJson);
+		ValidationResult integrityResult = StorageEnvelopeValidator.validate(envelope);
+		if (!integrityResult.isValid()) {
+			throw new APIException("Imported envelope integrity check failed: " + integrityResult);
+		}
 		// every embedded definition must be valid against local resources
 		if (envelope.getDraft() != null && envelope.getDraft().getDefinition() != null) {
 			ValidationResult draftResult = validateDraft(envelope.getDraft().getDefinition().toString());
@@ -317,9 +322,19 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 			}
 		}
 		if (envelope.getPublished() != null) {
+			if (!referenceChecker.privilegeExists(privilege)) {
+				throw new APIException("Cannot import a published model: required view privilege '" + privilege
+				        + "' is not registered in OpenMRS");
+			}
 			ValidationResult publishedResult = validateDraft(envelope.getPublished().getDefinition().toString());
 			if (!publishedResult.isValid()) {
 				throw new APIException("Imported published definition is invalid: " + publishedResult);
+			}
+		}
+		for (int i = 0; i < envelope.getHistory().size(); i++) {
+			ValidationResult historyResult = validateDraft(envelope.getHistory().get(i).getDefinition().toString());
+			if (!historyResult.isValid()) {
+				throw new APIException("Imported history[" + i + "] definition is invalid: " + historyResult);
 			}
 		}
 		
@@ -372,6 +387,17 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		return model;
 	}
 	
+	private CareModel getExistingModelByCodeForUpdate(String code) {
+		if (code == null) {
+			throw new APIException("Care Model code is required");
+		}
+		CareModel model = dao.getCareModelByCodeForUpdate(code);
+		if (model == null) {
+			throw new APIException("No Care Model with code '" + code + "'");
+		}
+		return model;
+	}
+
 	private StorageEnvelope readEnvelope(CareModel model) {
 		return StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
 	}

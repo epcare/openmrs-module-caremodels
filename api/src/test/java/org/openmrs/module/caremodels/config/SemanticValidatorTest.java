@@ -150,4 +150,50 @@ public class SemanticValidatorTest {
 		    mapper.readTree("[{\"uuid\": \"x\"}]"));
 		Fixtures.assertInvalid(validator.validateDefinition(definition), "facilities key");
 	}
+	
+	@Test
+	public void shouldValidateAliasesInsideNestedRules() throws Exception {
+		JsonNode definition = parse("minimal-model");
+		((com.fasterxml.jackson.databind.node.ObjectNode) definition.path("workspace").path("tabs").get(0)).set(
+		    "visibilityRule",
+		    mapper.readTree("{\"all\":[{\"type\":\"observation\",\"operator\":\"EXISTS\",\"alias\":\"missing\"}]}"));
+		Fixtures.assertInvalid(validator.validateDefinition(definition), "nested undeclared rule alias");
+	}
+	
+	@Test
+	public void shouldRejectLayoutReferencesAndGridOverflow() throws Exception {
+		JsonNode definition = parse("minimal-model");
+		((com.fasterxml.jackson.databind.node.ObjectNode) definition.path("workspace").path("tabs").get(0)).set("layouts",
+		    mapper.readTree("{\"wide\":[{\"widgetId\":\"missing\",\"row\":0,\"col\":12,\"w\":2,\"h\":1}]}"));
+		ValidationResult result = validator.validateDefinition(definition);
+		assertFalse(result.isValid());
+		assertTrue(result.toString(), result.toString().contains("undeclared widget"));
+		assertTrue(result.toString(), result.toString().contains("12-column"));
+	}
+	
+	@Test
+	public void shouldRejectIncompatibleWidgetResultType() throws Exception {
+		JsonNode definition = parse("hiv-model");
+		((com.fasterxml.jackson.databind.node.ObjectNode) definition.path("dataSources").path("viral_load_history")).put(
+		    "resultType", "NUMBER");
+		Fixtures.assertInvalid(validator.validateDefinition(definition), "trend chart result mismatch");
+	}
+	
+	@Test
+	public void shouldRejectTriggerWithUndeclaredAlias() throws Exception {
+		JsonNode definition = parse("minimal-model");
+		((com.fasterxml.jackson.databind.node.ObjectNode) definition.path("enrollment")).set("triggers",
+		    mapper.readTree("[{\"type\":\"OBSERVATION_SAVED\",\"conceptAlias\":\"missing\"}]"));
+		Fixtures.assertInvalid(validator.validateDefinition(definition), "trigger alias");
+	}
+	
+	@Test
+	public void shouldRejectTransitionWithUndeclaredStage() throws Exception {
+		JsonNode definition = parse("minimal-model");
+		com.fasterxml.jackson.databind.node.ObjectNode pathways = (com.fasterxml.jackson.databind.node.ObjectNode) definition
+		        .path("pathways");
+		pathways.set("stages", mapper.readTree("[{\"id\":\"start\",\"label\":\"Start\"}]"));
+		pathways.set("transitions", mapper.readTree("[{\"from\":\"start\",\"to\":\"missing\"}]"));
+		Fixtures.assertInvalid(validator.validateDefinition(definition), "pathway stage reference");
+	}
 }
