@@ -15,3 +15,13 @@ The existing envelope and column revision remain the externally visible revision
 ## 2026-10-21 — Pull request scope
 
 The first implementation pull request is limited to access-control correctness, revision-write safety, regression tests, and the sequenced implementation plan. Enrollment evaluation and additional resolvers follow in separate reviewable changes.
+
+## 2026-10-21 — Imported envelope trust boundary
+
+An imported envelope is treated as untrusted input even after JSON Schema validation. Import now recomputes every published checksum, rejects duplicate snapshot versions or a draft based on a non-current version, validates every history definition against local references, and requires the selected privilege to be registered when the import contains a published snapshot.
+
+## 2026-10-21 — Registry REST update boundary
+
+The generic model REST update accepts only `name`, `description`, and `privilege`. Code, status, revision, and configuration are read-only on that route; lifecycle and envelope mutations remain confined to the dedicated operation endpoints.
+
+Resolver-ID registration is intentionally deferred until the static resolver holder is replaced by the Spring-managed extension registry in Phase 4. Enforcing it against today’s private static registry would reject legitimate future extensions while providing no shared runtime registration point.

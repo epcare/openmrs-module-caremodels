@@ -112,6 +112,16 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 		return description;
 	}
 	
+	/** Only descriptive metadata is writable here; lifecycle fields use dedicated operations. */
+	@Override
+	public DelegatingResourceDescription getUpdatableProperties() {
+		DelegatingResourceDescription description = new DelegatingResourceDescription();
+		description.addProperty("name");
+		description.addProperty("description");
+		description.addProperty("privilege");
+		return description;
+	}
+	
 	// No configuration exposure on purpose: the envelope only travels through the
 	// envelope/operation resources.
 	
