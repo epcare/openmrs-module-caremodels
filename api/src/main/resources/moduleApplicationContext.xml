@@ -10,6 +10,15 @@
     <!-- Enable annotation processing for @Autowired and other annotations -->
     <context:annotation-config/>
 
+    <!-- Stateless rule core; event processors provide patient-specific evidence and evaluation time. -->
+    <bean id="caremodels.RuleExpressionEvaluator"
+          class="org.openmrs.module.caremodels.rule.RuleExpressionEvaluator" />
+
+    <bean id="caremodels.EnrollmentRuleEngine"
+          class="org.openmrs.module.caremodels.rule.EnrollmentRuleEngine">
+        <constructor-arg ref="caremodels.RuleExpressionEvaluator" />
+    </bean>
+
     <bean id="caremodels.HibernateCareModelDAO"
           class="org.openmrs.module.caremodels.api.db.hibernate.HibernateCareModelDAO">
         <property name="sessionFactory" ref="dbSessionFactory" />

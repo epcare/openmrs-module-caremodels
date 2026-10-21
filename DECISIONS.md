@@ -25,3 +25,9 @@ An imported envelope is treated as untrusted input even after JSON Schema valida
 The generic model REST update accepts only `name`, `description`, and `privilege`. Code, status, revision, and configuration are read-only on that route; lifecycle and envelope mutations remain confined to the dedicated operation endpoints.
 
 Resolver-ID registration is intentionally deferred until the static resolver holder is replaced by the Spring-managed extension registry in Phase 4. Enforcing it against today’s private static registry would reject legitimate future extensions while providing no shared runtime registration point.
+
+## 2026-10-21 — Enrollment rule semantics
+
+Rule expressions use strong Kleene three-valued logic. A resolver distinguishes known absence from unavailable evidence; unavailable data and lookup failures evaluate to `UNKNOWN`, and `UNKNOWN` never selects an enrollment action by itself. Window predicates require an explicit evaluation time so replay and reconciliation are deterministic.
+
+When multiple rules are true, the engine uses the conservative action order `EXCLUDE`, `PROPOSE_CONFIRMATION`, then `AUTO_ENROLL`. Rules with the same action are selected by lexical rule ID, so reordering the JSON array does not change the outcome. All individual evaluations remain available for provenance and diagnostics.
