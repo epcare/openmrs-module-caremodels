@@ -52,6 +52,31 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
 		        .add(Restrictions.eq("uuid", uuid)).uniqueResult();
 	}
+
+	@Override
+	public CareModelMember getMemberBySource(Integer patientId, Integer careModelId, String sourceUuid) {
+		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
+		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("careModelId", careModelId))
+		        .add(Restrictions.eq("sourceUuid", sourceUuid)).addOrder(Order.desc("episodeNumber")).setMaxResults(1)
+		        .uniqueResult();
+	}
+
+	@Override
+	public CareModelMember getOpenMember(Integer patientId, Integer careModelId) {
+		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
+		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("careModelId", careModelId))
+		        .add(Restrictions.eq("voided", false))
+		        .add(Restrictions.in("status", MemberStatus.PENDING, MemberStatus.ACTIVE, MemberStatus.SUSPENDED))
+		        .addOrder(Order.desc("episodeNumber")).setMaxResults(1).uniqueResult();
+	}
+
+	@Override
+	public int getNextEpisodeNumber(Integer patientId, Integer careModelId) {
+		Integer maximum = (Integer) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
+		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("careModelId", careModelId))
+		        .setProjection(Projections.max("episodeNumber")).uniqueResult();
+		return maximum == null ? 1 : maximum + 1;
+	}
 	
 	@Override
 	public CareModelMember getCurrentMember(Integer patientId, Integer careModelId) {

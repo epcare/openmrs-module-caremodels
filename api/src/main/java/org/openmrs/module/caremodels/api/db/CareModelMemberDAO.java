@@ -25,6 +25,15 @@ public interface CareModelMemberDAO {
 	CareModelMember getCareModelMemberById(Integer id);
 	
 	CareModelMember getCareModelMemberByUuid(String uuid);
+
+	/** Finds a prior rule-driven enrollment for idempotent event replay. */
+	CareModelMember getMemberBySource(Integer patientId, Integer careModelId, String sourceUuid);
+
+	/** Current proposal or enrolled episode, excluding completed/declined/erroneous history. */
+	CareModelMember getOpenMember(Integer patientId, Integer careModelId);
+
+	/** Next episode counter including voided history, which still owns its unique episode number. */
+	int getNextEpisodeNumber(Integer patientId, Integer careModelId);
 	
 	/** The current (non-voided, ACTIVE or SUSPENDED) episode for a patient in a model, if any. */
 	CareModelMember getCurrentMember(Integer patientId, Integer careModelId);

@@ -84,6 +84,28 @@
         </property>
     </bean>
 
+    <bean id="caremodels.CareModelEnrollmentService"
+          class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager" />
+        <property name="target">
+            <bean class="org.openmrs.module.caremodels.api.impl.CareModelEnrollmentServiceImpl">
+                <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
+                <property name="memberDAO" ref="caremodels.HibernateCareModelMemberDAO" />
+            </bean>
+        </property>
+        <property name="preInterceptors" ref="serviceInterceptors" />
+        <property name="transactionAttributeSource" ref="transactionAttributeSource" />
+    </bean>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list>
+                <value>org.openmrs.module.caremodels.api.CareModelEnrollmentService</value>
+                <ref bean="caremodels.CareModelEnrollmentService" />
+            </list>
+        </property>
+    </bean>
+
     <bean id="caremodels.CareModelAccessService"
           class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="transactionManager" ref="transactionManager" />
