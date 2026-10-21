@@ -5,34 +5,230 @@
   "description": "Typed, restricted OpenMRS query or registered resolver. Voided clinical data is rejected by default; result sizes and windows are bounded.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["type"],
+  "required": [
+    "type"
+  ],
   "properties": {
-    "type": { "enum": ["latest-observation", "historical-observations", "program-state", "encounter-query", "order-query", "registered"] },
-    "conceptAlias": { "type": "string", "minLength": 1 },
-    "programAlias": { "type": "string", "minLength": 1 },
-    "encounterTypeAlias": { "type": "string", "minLength": 1 },
-    "formAlias": { "type": "string", "minLength": 1 },
-    "windowDays": { "type": "integer", "minimum": 1, "maximum": 3650 },
-    "maxResults": { "type": "integer", "minimum": 1, "maximum": 1000 },
-    "units": { "type": "string", "maxLength": 20 },
-    "includeVoided": { "const": false },
-    "resolverId": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9._-]{0,99}$" },
-    "resolverVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
-    "resultType": { "enum": ["NUMBER", "CODED", "DATE", "STRING", "TIMESERIES", "TABLE"] },
-    "effectiveTime": { "enum": ["OBS_DATETIME", "ENCOUNTER_DATETIME", "NOW"] }
+    "type": {
+      "enum": [
+        "latest-observation",
+        "historical-observations",
+        "program-state",
+        "encounter-query",
+        "order-query",
+        "registered"
+      ]
+    },
+    "conceptAlias": {
+      "type": "string",
+      "minLength": 1
+    },
+    "programAlias": {
+      "type": "string",
+      "minLength": 1
+    },
+    "encounterTypeAlias": {
+      "type": "string",
+      "minLength": 1
+    },
+    "formAlias": {
+      "type": "string",
+      "minLength": 1
+    },
+    "windowDays": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3650
+    },
+    "maxResults": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "units": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "includeVoided": {
+      "const": false
+    },
+    "resolverId": {
+      "type": "string",
+      "pattern": "^[a-z][a-zA-Z0-9._-]{0,99}$"
+    },
+    "resolverVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "resultType": {
+      "enum": [
+        "NUMBER",
+        "CODED",
+        "DATE",
+        "STRING",
+        "TIMESERIES",
+        "TABLE"
+      ]
+    },
+    "effectiveTime": {
+      "enum": [
+        "OBS_DATETIME",
+        "ENCOUNTER_DATETIME",
+        "NOW"
+      ]
+    },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "name",
+          "gender",
+          "birthdate",
+          "birthdateEstimated",
+          "dead",
+          "deathDate"
+        ]
+      }
+    }
   },
   "allOf": [
-    { "if": { "properties": { "type": { "const": "registered" } } },
-      "then": { "required": ["resolverId", "resolverVersion", "resultType"] } },
-    { "if": { "properties": { "type": { "enum": ["latest-observation", "historical-observations"] } } },
-      "then": { "required": ["conceptAlias"] } },
-    { "if": { "properties": { "type": { "const": "program-state" } } },
-      "then": { "required": ["programAlias"] } },
-    { "if": { "properties": { "type": { "const": "encounter-query" } } },
-      "then": { "required": ["encounterTypeAlias"] } },
-    { "if": { "properties": { "type": { "const": "order-query" } } },
-      "then": { "required": ["conceptAlias"] } },
-    { "if": { "properties": { "type": { "enum": ["latest-observation", "historical-observations", "program-state", "encounter-query", "order-query"] } } },
-      "then": { "required": ["resultType"], "not": { "anyOf": [ { "required": ["resolverId"] }, { "required": ["resolverVersion"] } ] } } }
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "registered"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "resolverId",
+          "resolverVersion",
+          "resultType"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "enum": [
+              "latest-observation",
+              "historical-observations"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "conceptAlias"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "program-state"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "programAlias"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "encounter-query"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "encounterTypeAlias"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "order-query"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "conceptAlias"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "enum": [
+              "latest-observation",
+              "historical-observations",
+              "program-state",
+              "encounter-query",
+              "order-query"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "resultType"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "resolverId"
+              ]
+            },
+            {
+              "required": [
+                "resolverVersion"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "registered"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "resolverId": {
+            "enum": [
+              "patient-summary",
+              "conditions",
+              "encounter-diagnoses"
+            ]
+          },
+          "resolverVersion": {
+            "const": "1.0.0"
+          },
+          "resultType": {
+            "const": "TABLE"
+          }
+        }
+      }
+    }
   ]
 }

@@ -1,0 +1,28 @@
+{
+  "type": "encounter-diagnoses",
+  "resolverVersion": "1.0.0",
+  "assessedAt": "2026-10-21T12:00:00Z",
+  "provenance": "OpenMRS service API",
+  "status": "ok",
+  "records": [
+    {
+      "uuid": "example-diagnosis",
+      "encounterUuid": "example-encounter",
+      "effectiveTime": "2026-10-20T10:00:00Z",
+      "conceptUuid": null,
+      "name": "Recorded non-coded diagnosis",
+      "certainty": "CONFIRMED"
+    }
+  ],
+  "availableFields": [
+    "uuid",
+    "encounterUuid",
+    "effectiveTime",
+    "conceptUuid",
+    "name",
+    "certainty"
+  ],
+  "returnedCount": 1,
+  "truncated": false,
+  "total": null
+}

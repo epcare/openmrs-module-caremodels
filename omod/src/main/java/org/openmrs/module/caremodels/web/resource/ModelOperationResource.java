@@ -46,18 +46,18 @@ import org.openmrs.module.webservices.rest.web.response.ResponseException;
  */
 @Resource(name = RestConstants.VERSION_1 + "/caremodels/modeloperation", supportedClass = ModelOperationRequest.class, supportedOpenmrsVersions = { "1.8 - 9.0.*" })
 public class ModelOperationResource extends DelegatingCrudResource<ModelOperationRequest> {
-	
+
 	private static final ObjectMapper MAPPER = new ObjectMapper();
-	
+
 	private CareModelService service() {
 		return org.openmrs.api.context.Context.getService(CareModelService.class);
 	}
-	
+
 	@Override
 	public ModelOperationRequest newDelegate() {
 		return new ModelOperationRequest();
 	}
-	
+
 	@Override
 	public ModelOperationRequest save(ModelOperationRequest request) {
 		String operation = request.getOperation() == null ? "" : request.getOperation();
@@ -101,7 +101,7 @@ public class ModelOperationResource extends DelegatingCrudResource<ModelOperatio
 			return result;
 		}
 	}
-	
+
 	private ModelOperationRequest resultOf(CareModel model) {
 		ModelOperationRequest result = new ModelOperationRequest();
 		result.setModelUuid(model.getUuid());
@@ -111,13 +111,13 @@ public class ModelOperationResource extends DelegatingCrudResource<ModelOperatio
 		result.setRevision(model.getRevision());
 		return result;
 	}
-	
+
 	private ModelOperationRequest envelopeResultOf(String json) {
 		ModelOperationRequest result = new ModelOperationRequest();
 		result.setEnvelope(json);
 		return result;
 	}
-	
+
 	private ModelOperationRequest validationResultOf(ValidationResult validationResult) {
 		ModelOperationRequest result = new ModelOperationRequest();
 		result.setValid(validationResult.isValid());
@@ -131,27 +131,45 @@ public class ModelOperationResource extends DelegatingCrudResource<ModelOperatio
 		result.setValidationErrors(errors.length() > 0 ? errors.toString() : null);
 		return result;
 	}
-	
+
 	@Override
 	public ModelOperationRequest getByUniqueId(String uniqueId) {
 		throw new ObjectNotFoundException();
 	}
-	
+
 	@Override
 	protected void delete(ModelOperationRequest delegate, String reason, RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("Delete is not supported for modeloperation");
 	}
-	
+
 	@Override
 	public void purge(ModelOperationRequest delegate, RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("Purge is not supported for modeloperation");
 	}
-	
+
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("List is not supported for modeloperation");
 	}
-	
+
+	@Override
+	public DelegatingResourceDescription getCreatableProperties() {
+		DelegatingResourceDescription description = new DelegatingResourceDescription();
+		description.addRequiredProperty("operation");
+		description.addProperty("code");
+		description.addProperty("name");
+		description.addProperty("description");
+		description.addProperty("privilege");
+		description.addProperty("definition");
+		description.addProperty("envelope");
+		description.addProperty("expectedRevision");
+		description.addProperty("version");
+		description.addProperty("sourceCode");
+		description.addProperty("newCode");
+		description.addProperty("newName");
+		return description;
+	}
+
 	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		// request/response fields mirror the delegate's properties
@@ -178,7 +196,7 @@ public class ModelOperationResource extends DelegatingCrudResource<ModelOperatio
 		description.addProperty("currentRevision");
 		return description;
 	}
-	
+
 	@Override
 	public String getResourceVersion() {
 		return "1.0";

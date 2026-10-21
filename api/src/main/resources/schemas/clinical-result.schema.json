@@ -1,0 +1,918 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epcare.openmrs.org/schemas/clinical-result.schema.json",
+  "title": "Versioned Care Models resolver result (inside resultJson)",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "latest-observation",
+            "historical-observations"
+          ]
+        },
+        "resolverVersion": {
+          "const": "1.0.0"
+        },
+        "assessedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "no-records"
+          ]
+        },
+        "returnedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "total": {
+          "type": "null"
+        },
+        "availableFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "concept": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "units": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "programUuid": {
+          "type": "string"
+        },
+        "values": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "obsUuid": {
+                "type": "string"
+              },
+              "effectiveTime": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "valueType": {
+                "enum": [
+                  "NUMBER",
+                  "CODED",
+                  "STRING",
+                  "DATE"
+                ]
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "number",
+                  "null"
+                ]
+              },
+              "valueName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "obsUuid",
+              "effectiveTime",
+              "valueType",
+              "value"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "valueType": {
+                      "const": "NUMBER"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "value": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "type",
+        "resolverVersion",
+        "assessedAt",
+        "provenance",
+        "status",
+        "values",
+        "concept"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "encounter-query"
+          ]
+        },
+        "resolverVersion": {
+          "const": "1.0.0"
+        },
+        "assessedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "no-records"
+          ]
+        },
+        "returnedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "total": {
+          "type": "null"
+        },
+        "availableFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "concept": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "units": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "programUuid": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "uuid": {
+                "type": "string"
+              },
+              "effectiveTime": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "encounterTypeUuid": {
+                "type": "string"
+              },
+              "encounterTypeName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "const": "recorded"
+              }
+            },
+            "required": [
+              "uuid"
+            ]
+          }
+        }
+      },
+      "required": [
+        "type",
+        "resolverVersion",
+        "assessedAt",
+        "provenance",
+        "status",
+        "records",
+        "truncated",
+        "total",
+        "returnedCount"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "program-state"
+          ]
+        },
+        "resolverVersion": {
+          "const": "1.0.0"
+        },
+        "assessedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "no-records"
+          ]
+        },
+        "returnedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "total": {
+          "type": "null"
+        },
+        "availableFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "concept": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "units": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "programUuid": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "uuid": {
+                "type": "string"
+              },
+              "dateEnrolled": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "dateCompleted": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "currentStates": {
+                "type": "array",
+                "maxItems": 50,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "uuid": {
+                      "type": "string"
+                    },
+                    "stateUuid": {
+                      "type": "string"
+                    },
+                    "workflowUuid": {
+                      "type": "string"
+                    },
+                    "startDate": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "uuid",
+                    "stateUuid",
+                    "workflowUuid",
+                    "startDate"
+                  ]
+                }
+              },
+              "statesTruncated": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "uuid"
+            ]
+          }
+        }
+      },
+      "required": [
+        "type",
+        "resolverVersion",
+        "assessedAt",
+        "provenance",
+        "status",
+        "records",
+        "truncated",
+        "total",
+        "returnedCount"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "order-query"
+          ]
+        },
+        "resolverVersion": {
+          "const": "1.0.0"
+        },
+        "assessedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "no-records"
+          ]
+        },
+        "returnedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "total": {
+          "type": "null"
+        },
+        "availableFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "concept": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "units": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "programUuid": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "uuid": {
+                "type": "string"
+              },
+              "action": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dateActivated": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "effectiveStartDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "effectiveStopDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "autoExpireDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "activeAtAssessment": {
+                "type": "boolean"
+              },
+              "previousOrderUuid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "orderTypeUuid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "drugUuid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "drugName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dose": {
+                "type": "number"
+              },
+              "doseUnitsConceptUuid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "uuid"
+            ]
+          }
+        }
+      },
+      "required": [
+        "type",
+        "resolverVersion",
+        "assessedAt",
+        "provenance",
+        "status",
+        "records",
+        "truncated",
+        "total",
+        "returnedCount"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "conditions"
+          ]
+        },
+        "resolverVersion": {
+          "const": "1.0.0"
+        },
+        "assessedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "no-records"
+          ]
+        },
+        "returnedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "total": {
+          "type": "null"
+        },
+        "availableFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "concept": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "units": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "programUuid": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "uuid": {
+                "type": "string"
+              },
+              "onsetDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "endDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "clinicalStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "verificationStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "conceptUuid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "uuid"
+            ]
+          }
+        }
+      },
+      "required": [
+        "type",
+        "resolverVersion",
+        "assessedAt",
+        "provenance",
+        "status",
+        "records",
+        "truncated",
+        "total",
+        "returnedCount"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "encounter-diagnoses"
+          ]
+        },
+        "resolverVersion": {
+          "const": "1.0.0"
+        },
+        "assessedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "no-records"
+          ]
+        },
+        "returnedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "total": {
+          "type": "null"
+        },
+        "availableFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "concept": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "units": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "programUuid": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "uuid": {
+                "type": "string"
+              },
+              "encounterUuid": {
+                "type": "string"
+              },
+              "effectiveTime": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "certainty": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "conceptUuid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "uuid"
+            ]
+          }
+        }
+      },
+      "required": [
+        "type",
+        "resolverVersion",
+        "assessedAt",
+        "provenance",
+        "status",
+        "records",
+        "truncated",
+        "total",
+        "returnedCount"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "patient-summary"
+          ]
+        },
+        "resolverVersion": {
+          "const": "1.0.0"
+        },
+        "assessedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "no-records"
+          ]
+        },
+        "returnedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "total": {
+          "type": "null"
+        },
+        "availableFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "concept": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "units": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "programUuid": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "gender": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "birthdate": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "birthdateEstimated": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "dead": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "deathDate": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          },
+          "required": []
+        }
+      },
+      "required": [
+        "type",
+        "resolverVersion",
+        "assessedAt",
+        "provenance",
+        "status",
+        "fields"
+      ]
+    }
+  ]
+}

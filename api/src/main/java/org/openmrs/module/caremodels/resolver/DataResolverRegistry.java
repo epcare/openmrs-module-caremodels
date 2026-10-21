@@ -20,22 +20,31 @@ import java.util.Map;
  * here; unknown ids fail closed at the data endpoint, never at runtime discovery.
  */
 public class DataResolverRegistry {
-	
+
 	private final Map<String, DataResolver> resolvers = new HashMap<String, DataResolver>();
-	
+
 	public DataResolverRegistry() {
 		register(new LatestObservationResolver());
+		register(new LatestObservationResolver("historical-observations", java.time.Clock.systemUTC()));
+		register(new EncounterResolver());
+		register(new ProgramStateResolver());
+		register(new PatientSummaryResolver());
+		register(new OrderResolver());
+		register(new ConditionResolver());
+		register(new DiagnosisResolver());
 	}
-	
+
 	public synchronized void register(DataResolver resolver) {
 		resolvers.put(resolver.getId(), resolver);
 	}
-	
+
 	public synchronized DataResolver getResolver(String id) {
 		return resolvers.get(id);
 	}
-	
+
 	public synchronized List<String> getResolverIds() {
-		return Collections.unmodifiableList(new ArrayList<String>(resolvers.keySet()));
+		List<String> ids = new ArrayList<String>(resolvers.keySet());
+		Collections.sort(ids);
+		return Collections.unmodifiableList(ids);
 	}
 }

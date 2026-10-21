@@ -1,0 +1,26 @@
+{
+  "type": "encounter-query",
+  "resolverVersion": "1.0.0",
+  "assessedAt": "2026-10-21T12:00:00Z",
+  "provenance": "OpenMRS service API",
+  "status": "ok",
+  "records": [
+    {
+      "uuid": "example-encounter",
+      "effectiveTime": "2026-10-20T10:00:00Z",
+      "encounterTypeUuid": "example-encounter-type",
+      "encounterTypeName": "Review",
+      "status": "recorded"
+    }
+  ],
+  "availableFields": [
+    "uuid",
+    "effectiveTime",
+    "encounterTypeUuid",
+    "encounterTypeName",
+    "status"
+  ],
+  "returnedCount": 1,
+  "truncated": false,
+  "total": null
+}

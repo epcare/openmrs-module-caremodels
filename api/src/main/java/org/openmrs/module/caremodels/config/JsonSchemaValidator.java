@@ -31,44 +31,45 @@ import com.networknt.schema.ValidationMessage;
  * pass afterwards.
  */
 public class JsonSchemaValidator {
-	
+
 	/** Base URI the schemas declare in $id; mapped onto the classpath schemas/ directory. */
 	public static final String SCHEMA_BASE_URI = "https://epcare.openmrs.org/schemas/";
-	
+
 	public enum SchemaType {
-		MODEL_DEFINITION("model-definition.schema.json"), STORAGE_ENVELOPE("storage-envelope.schema.json"), MEMBERSHIP_DATA(
+		DATA_SOURCE("data-source.schema.json"), CLINICAL_RESULT("clinical-result.schema.json"), MODEL_DEFINITION(
+		        "model-definition.schema.json"), STORAGE_ENVELOPE("storage-envelope.schema.json"), MEMBERSHIP_DATA(
 		        "membership-data.schema.json");
-		
+
 		private final String resource;
-		
+
 		SchemaType(String resource) {
 			this.resource = resource;
 		}
-		
+
 		public String getResource() {
 			return resource;
 		}
 	}
-	
+
 	private final ObjectMapper objectMapper;
-	
+
 	private final JsonSchemaFactory schemaFactory;
-	
+
 	private final Map<SchemaType, JsonSchema> schemaCache = new ConcurrentHashMap<SchemaType, JsonSchema>();
-	
+
 	public JsonSchemaValidator(ObjectMapper objectMapper) {
 		this.objectMapper = objectMapper;
 		this.schemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012))
 		        .uriFetcher(new ClasspathSchemaUriFetcher(), "https").build();
 	}
-	
+
 	public JsonSchemaValidator() {
 		this(new ObjectMapper());
 	}
-	
+
 	/**
 	 * Parses and structurally validates a JSON document against the given schema.
-	 * 
+	 *
 	 * @return validation result; parse errors are reported as validation errors at path "$"
 	 */
 	public ValidationResult validate(String json, SchemaType schemaType) {
@@ -81,7 +82,7 @@ public class JsonSchemaValidator {
 		}
 		return validate(node, schemaType);
 	}
-	
+
 	public ValidationResult validate(JsonNode node, SchemaType schemaType) {
 		JsonSchema schema = schemaCache.computeIfAbsent(schemaType, this::loadSchema);
 		ValidationResult result = ValidationResult.valid();
@@ -90,15 +91,15 @@ public class JsonSchemaValidator {
 		}
 		return result;
 	}
-	
+
 	private JsonSchema loadSchema(SchemaType schemaType) {
 		URI uri = URI.create(SCHEMA_BASE_URI + schemaType.getResource());
 		return schemaFactory.getSchema(uri);
 	}
-	
+
 	/** Maps {@link #SCHEMA_BASE_URI} onto classpath resources under /schemas/. */
 	private class ClasspathSchemaUriFetcher implements com.networknt.schema.uri.URIFetcher {
-		
+
 		@Override
 		public InputStream fetch(URI uri) throws IOException {
 			String uriString = uri.toString();

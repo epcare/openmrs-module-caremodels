@@ -1,0 +1,25 @@
+{
+  "type": "historical-observations",
+  "resolverVersion": "1.0.0",
+  "assessedAt": "2026-10-21T12:00:00Z",
+  "provenance": "OpenMRS service API",
+  "status": "ok",
+  "concept": "example-concept",
+  "values": [
+    {
+      "obsUuid": "example-observation-a",
+      "effectiveTime": "2026-10-20T10:00:00Z",
+      "valueType": "NUMBER",
+      "value": 63.5
+    },
+    {
+      "obsUuid": "example-observation-b",
+      "effectiveTime": "2026-09-20T10:00:00Z",
+      "valueType": "NUMBER",
+      "value": 63.0
+    }
+  ],
+  "returnedCount": 2,
+  "truncated": false,
+  "total": null
+}

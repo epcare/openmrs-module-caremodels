@@ -33,21 +33,21 @@ import org.springframework.transaction.annotation.Transactional;
  * REST layer delegates all authorization to this service on each request.
  */
 public interface CareModelAccessService extends OpenmrsService {
-	
+
 	/**
 	 * Throws an {@link APIException} when the current user lacks the master privilege. The
 	 * membership listing must not be reachable without it.
 	 */
 	@Transactional(readOnly = true)
 	void requireMasterPrivilege() throws APIException;
-	
+
 	/**
 	 * Resolves the patient and verifies the caller may access the patient's record; fails closed
 	 * for unknown patients.
 	 */
 	@Transactional(readOnly = true)
 	String requirePatientAccess(String patientUuid) throws APIException;
-	
+
 	/**
 	 * The authorized ACTIVE memberships of a patient: safe metadata only, filtered by master
 	 * privilege, patient access, model status and model privilege. Enacts the full authorization
@@ -56,38 +56,49 @@ public interface CareModelAccessService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(CareModelsPrivileges.VIEW_CARE_MODELS)
 	List<CareModelMembershipDTO> getAuthorizedMemberships(String patientUuid) throws APIException;
-	
+
 	/**
 	 * Full revalidation for a workspace or data request: master privilege, patient access, ACTIVE
 	 * non-voided membership, PUBLISHED non-retired model, model privilege, and that the resolved
 	 * tab exists in the published definition. A null tabId resolves the definition's default tab.
-	 * 
+	 *
 	 * @return the authorized view: the membership, the resolved tab's definition and the tab
 	 *         summary of the whole definition
 	 */
 	@Transactional(readOnly = true)
 	AuthorizedAccess authorizeWorkspace(String patientUuid, String modelCodeOrUuid, String tabId) throws APIException;
-	
+
 	/**
 	 * Result of a successful authorization: everything the caller may touch, and nothing more.
 	 */
 	class AuthorizedAccess {
-		
+
+		private com.fasterxml.jackson.databind.JsonNode memberPathway;
+
+		public com.fasterxml.jackson.databind.JsonNode getMemberPathway() {
+			return memberPathway;
+		}
+
+		/** Internal authorized projection only; no metadata is accepted from a REST request. */
+		public void setMemberPathway(com.fasterxml.jackson.databind.JsonNode memberPathway) {
+			this.memberPathway = memberPathway;
+		}
+
 		private final String patientUuid;
-		
+
 		private final String modelCode;
-		
+
 		private final String modelUuid;
-		
+
 		private final String memberUuid;
-		
+
 		private final com.fasterxml.jackson.databind.JsonNode publishedDefinition;
-		
+
 		private final com.fasterxml.jackson.databind.JsonNode tabDefinition;
-		
+
 		/** Id + label of every tab in the definition, in authored order. */
 		private final com.fasterxml.jackson.databind.JsonNode tabs;
-		
+
 		public AuthorizedAccess(String patientUuid, String modelCode, String modelUuid, String memberUuid,
 		    com.fasterxml.jackson.databind.JsonNode publishedDefinition,
 		    com.fasterxml.jackson.databind.JsonNode tabDefinition, com.fasterxml.jackson.databind.JsonNode tabs) {
@@ -99,32 +110,32 @@ public interface CareModelAccessService extends OpenmrsService {
 			this.tabDefinition = tabDefinition;
 			this.tabs = tabs;
 		}
-		
+
 		public com.fasterxml.jackson.databind.JsonNode getTabs() {
 			return tabs;
 		}
-		
+
 		public String getPatientUuid() {
 			return patientUuid;
 		}
-		
+
 		public String getModelCode() {
 			return modelCode;
 		}
-		
+
 		public String getModelUuid() {
 			return modelUuid;
 		}
-		
+
 		public String getMemberUuid() {
 			return memberUuid;
 		}
-		
+
 		/** The full published definition; only for the selected model. */
 		public com.fasterxml.jackson.databind.JsonNode getPublishedDefinition() {
 			return publishedDefinition;
 		}
-		
+
 		/** The requested inner tab, or the whole definition when no tab was requested. */
 		public com.fasterxml.jackson.databind.JsonNode getTabDefinition() {
 			return tabDefinition;
