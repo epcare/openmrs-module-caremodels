@@ -19,6 +19,17 @@
         <constructor-arg ref="caremodels.RuleExpressionEvaluator" />
     </bean>
 
+    <!-- AOP service advice publishes here; listeners are added by enrollment processors. -->
+    <bean id="caremodels.ClinicalChangePublisher"
+          class="org.openmrs.module.caremodels.event.ClinicalChangePublisher">
+        <property name="listeners">
+            <list />
+        </property>
+    </bean>
+
+    <bean id="caremodels.EnrollmentTriggerMatcher"
+          class="org.openmrs.module.caremodels.event.EnrollmentTriggerMatcher" />
+
     <bean id="caremodels.HibernateCareModelDAO"
           class="org.openmrs.module.caremodels.api.db.hibernate.HibernateCareModelDAO">
         <property name="sessionFactory" ref="dbSessionFactory" />
