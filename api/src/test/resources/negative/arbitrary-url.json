@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "CHRONIC_CARE",
+    "display": { "label": "HIV Care", "order": 10 }
+  },
+  "terminology": {},
+  "enrollment": { "enabled": false },
+  "dataSources": {},
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [
+      {
+        "id": "overview",
+        "label": "Overview",
+        "widgets": [
+          {
+            "id": "phishing-tile",
+            "type": "metric",
+            "position": { "row": 0, "col": 1, "w": 4, "h": 2 },
+            "properties": {
+              "title": "Announcements",
+              "remoteComponentUrl": "https://evil.example.com/widget.js"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "forms": [],
+  "actions": [],
+  "lifecycle": { "completion": { "mode": "MANUAL" }, "onSourceCorrection": "FLAG_FOR_REVIEW" }
+}

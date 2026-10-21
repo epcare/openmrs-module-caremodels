@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epcare.openmrs.org/schemas/form-ref.schema.json",
+  "title": "Form reference",
+  "description": "Reference to an existing OpenMRS form by validated UUID plus a local alias; forms are launched through the installed form engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["alias", "formUuid"],
+  "properties": {
+    "alias": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9._-]{0,99}$" },
+    "formUuid": {
+      "anyOf": [
+        { "type": "string", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+        { "type": "string", "pattern": "^[0-9a-fA-F]{32}$" }
+      ]
+    },
+    "encounterTypeAlias": { "type": "string", "minLength": 1 },
+    "required": { "type": "boolean", "default": false }
+  }
+}

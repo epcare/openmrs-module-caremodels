@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "CHRONIC_CARE",
+    "display": { "label": "HIV Care", "order": 10 }
+  },
+  "terminology": {},
+  "enrollment": { "enabled": false },
+  "dataSources": {},
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [ { "id": "overview", "label": "Overview", "widgets": [] } ]
+  },
+  "forms": [],
+  "actions": [],
+  "lifecycle": { "completion": { "mode": "MANUAL" }, "onSourceCorrection": "FLAG_FOR_REVIEW" },
+  "facilities": [
+    { "uuid": "18e89504-5b4c-4b40-a397-4a9c6a2f9d1e", "activated": true }
+  ],
+  "overrides": {}
+}

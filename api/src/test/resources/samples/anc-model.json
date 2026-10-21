@@ -1,0 +1,162 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "MATERNAL",
+    "display": {
+      "label": "Antenatal Care",
+      "order": 20
+    }
+  },
+  "terminology": {
+    "concepts": {
+      "gestational_age": "1439AAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "pregnancy_status": "1537AAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "blood_pressure_systolic": "5085AAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    "programs": {
+      "anc_program": "c0b1a9f4-2e3d-4c5b-8a79-6f0e5d4c3b2a"
+    },
+    "encounterTypes": {
+      "anc_visit": "b4d5e6f7-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+    },
+    "forms": {
+      "anc_followup_form": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d"
+    },
+    "codedAnswers": {
+      "pregnant": "1065AAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    }
+  },
+  "enrollment": {
+    "enabled": true,
+    "triggers": [
+      {
+        "type": "OBSERVATION_SAVED",
+        "conceptAlias": "pregnancy_status"
+      }
+    ],
+    "rules": [
+      {
+        "id": "confirm-pregnancy",
+        "action": "PROPOSE_CONFIRMATION",
+        "expression": {
+          "type": "observation",
+          "operator": "EQUALS",
+          "alias": "pregnancy_status",
+          "value": "pregnant",
+          "codedAnswerAlias": "pregnant"
+        }
+      }
+    ],
+    "manualEnrollment": {
+      "enabled": true,
+      "requiresReason": true
+    },
+    "reenrollment": {
+      "enabled": false
+    }
+  },
+  "dataSources": {
+    "gestational_age_latest": {
+      "type": "latest-observation",
+      "conceptAlias": "gestational_age",
+      "resultType": "NUMBER",
+      "effectiveTime": "OBS_DATETIME",
+      "maxResults": 1,
+      "units": "weeks"
+    },
+    "anc_visit_history": {
+      "type": "encounter-query",
+      "encounterTypeAlias": "anc_visit",
+      "resultType": "TABLE",
+      "windowDays": 280,
+      "maxResults": 50
+    }
+  },
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [
+      {
+        "id": "overview",
+        "label": "Pregnancy summary",
+        "widgets": [
+          {
+            "id": "ga-metric",
+            "type": "metric",
+            "dataSource": "gestational_age_latest",
+            "position": {
+              "row": 0,
+              "col": 1,
+              "w": 4,
+              "h": 2
+            },
+            "properties": {
+              "title": "Gestational age"
+            }
+          },
+          {
+            "id": "anc-visits",
+            "type": "clinical-table",
+            "dataSource": "anc_visit_history",
+            "position": {
+              "row": 2,
+              "col": 1,
+              "w": 12,
+              "h": 6
+            }
+          }
+        ]
+      },
+      {
+        "id": "forms",
+        "label": "Forms",
+        "widgets": [
+          {
+            "id": "anc-follow-up",
+            "type": "form-launcher",
+            "formAlias": "anc_followup_form",
+            "position": {
+              "row": 0,
+              "col": 1,
+              "w": 6,
+              "h": 2
+            },
+            "properties": {
+              "title": "ANC follow-up"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "forms": [
+    {
+      "alias": "anc_followup_form",
+      "formUuid": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      "encounterTypeAlias": "anc_visit",
+      "required": false
+    }
+  ],
+  "actions": [
+    {
+      "id": "record-anc-visit",
+      "type": "launch-form",
+      "label": "Record ANC visit",
+      "formAlias": "anc_followup_form"
+    }
+  ],
+  "pathways": {
+    "enabled": false,
+    "stages": [],
+    "transitions": []
+  },
+  "automation": {
+    "rules": []
+  },
+  "lifecycle": {
+    "completion": {
+      "mode": "RULE",
+      "ruleId": "complete-after-delivery"
+    },
+    "onSourceCorrection": "FLAG_FOR_REVIEW"
+  }
+}

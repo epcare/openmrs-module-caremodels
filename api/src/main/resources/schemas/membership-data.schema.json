@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epcare.openmrs.org/schemas/membership-data.schema.json",
+  "title": "Care Model membership data",
+  "description": "Patient-specific provenance, pathway position and transition history. Minimized and bounded; clinical content (observations, orders) must never be duplicated here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "enrollment"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "enrollment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["definitionVersion"],
+      "properties": {
+        "ruleId": { "type": "string", "maxLength": 100 },
+        "definitionVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "trigger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["AUTO", "CONFIRMATION", "MANUAL", "BACKFILL"] },
+            "uuid": { "type": "string", "maxLength": 38 }
+          }
+        },
+        "confirmation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "confirmedBy": { "type": "string", "maxLength": 255 },
+            "confirmedAt": { "type": "string", "format": "date-time" }
+          }
+        }
+      }
+    },
+    "pathway": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "enteredAt"],
+      "properties": {
+        "stage": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "enteredAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "history": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "at"],
+        "properties": {
+          "type": { "enum": ["ENROLLED", "SUSPENDED", "RESUMED", "COMPLETED", "WITHDRAWN", "DECLINED", "FLAGGED_FOR_REVIEW", "EPISODE_STARTED"] },
+          "at": { "type": "string", "format": "date-time" },
+          "actor": { "type": "string", "maxLength": 255 },
+          "reason": { "type": "string", "maxLength": 500 },
+          "sourceUuid": { "type": "string", "maxLength": 38 }
+        }
+      }
+    }
+  }
+}

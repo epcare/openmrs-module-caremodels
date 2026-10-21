@@ -1,0 +1,222 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.openmrs.maven.parents</groupId>
+		<artifactId>maven-parent-openmrs-module</artifactId>
+		<version>1.1.1</version>
+	</parent>
+
+	<groupId>org.openmrs.module</groupId>
+	<artifactId>caremodels</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>Care Models</name>
+	<description>This module exposes APIs to support the Care Models framework: JSON-defined care models, enrollment episodes and guarded patient workspace data.</description>
+
+	<url>https://wiki.openmrs.org/</url>
+
+	<scm>
+		<connection>scm:git:git@github.com:openmrs/openmrs-module-caremodels.git</connection>
+		<developerConnection>scm:git:git@github.com:openmrs/openmrs-module-caremodels.git</developerConnection>
+		<url>https://github.com/openmrs/openmrs-module-caremodels/</url>
+		<tag>HEAD</tag>
+	</scm>
+
+	<modules>
+		<module>api</module>
+		<module>omod</module>
+	</modules>
+
+	<distributionManagement>
+		<repository>
+			<id>openmrs-repo-modules</id>
+			<name>OpenMRS Nexus Modules</name>
+			<url>https://mavenrepo.openmrs.org/nexus/content/repositories/modules</url>
+		</repository>
+		<snapshotRepository>
+			<id>openmrs-repo-snapshots</id>
+			<name>OpenMRS Nexus Snapshots</name>
+			<url>https://mavenrepo.openmrs.org/nexus/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- Begin OpenMRS core -->
+			<dependency>
+				<groupId>org.openmrs.api</groupId>
+				<artifactId>openmrs-api</artifactId>
+				<version>${openmrsPlatformVersion}</version>
+				<type>jar</type>
+				<scope>provided</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.openmrs.web</groupId>
+				<artifactId>openmrs-web</artifactId>
+				<version>${openmrsPlatformVersion}</version>
+				<type>jar</type>
+				<scope>provided</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.openmrs.api</groupId>
+				<artifactId>openmrs-api</artifactId>
+				<version>${openmrsPlatformVersion}</version>
+				<type>test-jar</type>
+				<scope>test</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.openmrs.web</groupId>
+				<artifactId>openmrs-web</artifactId>
+				<version>${openmrsPlatformVersion}</version>
+				<type>test-jar</type>
+				<scope>test</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.openmrs.test</groupId>
+				<artifactId>openmrs-test</artifactId>
+				<version>${openmrsPlatformVersion}</version>
+				<type>pom</type>
+				<scope>test</scope>
+			</dependency>
+			<!-- End OpenMRS core -->
+
+			<dependency>
+				<groupId>org.openmrs.module</groupId>
+				<artifactId>webservices.rest-omod-common</artifactId>
+				<version>${webservices.restModuleVersion}</version>
+				<scope>provided</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.openmrs.module</groupId>
+				<artifactId>webservices.rest-omod-common</artifactId>
+				<version>${webservices.restModuleVersion}</version>
+				<scope>provided</scope>
+				<type>test-jar</type>
+			</dependency>
+
+			<!-- JSON Schema Draft 2020-12 validator (Java 8 compatible 1.0.x line); bundled in omod -->
+			<dependency>
+				<groupId>com.networknt</groupId>
+				<artifactId>json-schema-validator</artifactId>
+				<version>${jsonSchemaValidatorVersion}</version>
+			</dependency>
+
+			<!-- Jackson is provided by the platform (openmrs-api 2.7.4 ships 2.18.2) -->
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>${jacksonVersion}</version>
+				<scope>provided</scope>
+			</dependency>
+
+			<!--
+				Provided by the platform; MUST NOT be bundled in the omod. Bundling slf4j-api makes
+				the module classloader load its own LoggerFactory while StaticLoggerBinder resolves
+				from the webapp, which fails startup with a LinkageError (loader constraint
+				violation) — seen on the 2.8.7 deployment on 2026-10-21. The dependencyManagement
+				entry also forces the json-schema-validator transitive to provided scope.
+			-->
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>1.7.36</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
+				<version>${jacksonVersion}</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-annotations</artifactId>
+				<version>${jacksonVersion}</version>
+				<scope>provided</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<repositories>
+		<repository>
+			<id>openmrs-repo</id>
+			<name>OpenMRS Nexus Repository</name>
+			<url>https://mavenrepo.openmrs.org/public</url>
+		</repository>
+		<repository>
+			<id>central</id>
+			<name>Maven Repository Switchboard</name>
+			<layout>default</layout>
+			<url>https://repo1.maven.org/maven2</url>
+		</repository>
+	</repositories>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>openmrs-repo</id>
+			<name>OpenMRS Nexus Repository</name>
+			<url>https://mavenrepo.openmrs.org/public</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<!-- Spotless plugin -->
+				<plugin>
+					<groupId>com.diffplug.spotless</groupId>
+					<artifactId>spotless-maven-plugin</artifactId>
+					<version>2.27.2</version>
+					<configuration>
+						<java>
+							<licenseHeader>
+								<file>${project.basedir}/license-header.txt</file>
+							</licenseHeader>
+							<removeUnusedImports />
+							<importOrder>
+								<order>javax,java</order>
+							</importOrder>
+						</java>
+						<formats>
+							<format>
+								<includes>
+									<include>**/*.xml</include>
+								</includes>
+								<licenseHeader>
+									<file>${project.basedir}/license-header.txt</file>
+									<delimiter>^(?!&lt;\?xml)</delimiter>
+								</licenseHeader>
+							</format>
+						</formats>
+					</configuration>
+					<executions>
+						<execution>
+							<id>spotless-apply</id>
+							<phase>validate</phase>
+							<goals>
+								<goal>apply</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+	<properties>
+		<openmrsPlatformVersion>2.7.4</openmrsPlatformVersion>
+		<webservices.restModuleVersion>2.28.0</webservices.restModuleVersion>
+		<jsonSchemaValidatorVersion>1.0.87</jsonSchemaValidatorVersion>
+		<jacksonVersion>2.18.2</jacksonVersion>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+</project>

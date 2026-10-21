@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "CHRONIC_CARE",
+    "display": { "label": "HIV Care", "order": 10 }
+  },
+  "terminology": {
+    "concepts": {
+      "viral_load": "856AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    }
+  },
+  "enrollment": { "enabled": false },
+  "dataSources": {
+    "viral_load_history": {
+      "type": "historical-observations",
+      "conceptAlias": "viral_load",
+      "resultType": "TIMESERIES",
+      "sql": "SELECT person_id, value_numeric FROM obs WHERE concept_id = 856"
+    }
+  },
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [ { "id": "overview", "label": "Overview", "widgets": [] } ]
+  },
+  "forms": [],
+  "actions": [],
+  "lifecycle": { "completion": { "mode": "MANUAL" }, "onSourceCorrection": "FLAG_FOR_REVIEW" }
+}

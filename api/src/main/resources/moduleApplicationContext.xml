@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+
+    <!-- Enable annotation processing for @Autowired and other annotations -->
+    <context:annotation-config/>
+
+    <bean id="caremodels.HibernateCareModelDAO"
+          class="org.openmrs.module.caremodels.api.db.hibernate.HibernateCareModelDAO">
+        <property name="sessionFactory" ref="dbSessionFactory" />
+    </bean>
+
+    <bean id="caremodels.CareModelService"
+          class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager" />
+        <property name="target">
+            <bean class="org.openmrs.module.caremodels.api.impl.CareModelServiceImpl">
+                <property name="dao" ref="caremodels.HibernateCareModelDAO" />
+            </bean>
+        </property>
+        <property name="preInterceptors" ref="serviceInterceptors" />
+        <property name="transactionAttributeSource" ref="transactionAttributeSource" />
+    </bean>
+
+    <!-- Service registration with OpenMRS context -->
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list>
+                <value>org.openmrs.module.caremodels.api.CareModelService</value>
+                <ref bean="caremodels.CareModelService" />
+            </list>
+        </property>
+    </bean>
+
+    <bean id="caremodels.HibernateCareModelMemberDAO"
+          class="org.openmrs.module.caremodels.api.db.hibernate.HibernateCareModelMemberDAO">
+        <property name="sessionFactory" ref="dbSessionFactory" />
+    </bean>
+
+    <bean id="caremodels.CareModelMemberService"
+          class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager" />
+        <property name="target">
+            <bean class="org.openmrs.module.caremodels.api.impl.CareModelMemberServiceImpl">
+                <property name="dao" ref="caremodels.HibernateCareModelMemberDAO" />
+            </bean>
+        </property>
+        <property name="preInterceptors" ref="serviceInterceptors" />
+        <property name="transactionAttributeSource" ref="transactionAttributeSource" />
+    </bean>
+
+    <!-- Service registration with OpenMRS context -->
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list>
+                <value>org.openmrs.module.caremodels.api.CareModelMemberService</value>
+                <ref bean="caremodels.CareModelMemberService" />
+            </list>
+        </property>
+    </bean>
+
+    <bean id="caremodels.CareModelAccessService"
+          class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager" />
+        <property name="target">
+            <bean class="org.openmrs.module.caremodels.api.impl.CareModelAccessServiceImpl">
+                <property name="memberService" ref="caremodels.CareModelMemberService" />
+                <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
+            </bean>
+        </property>
+        <property name="preInterceptors" ref="serviceInterceptors" />
+        <property name="transactionAttributeSource" ref="transactionAttributeSource" />
+    </bean>
+
+    <!-- Service registration with OpenMRS context -->
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list>
+                <value>org.openmrs.module.caremodels.api.CareModelAccessService</value>
+                <ref bean="caremodels.CareModelAccessService" />
+            </list>
+        </property>
+    </bean>
+
+</beans>

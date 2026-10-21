@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "CHRONIC_CARE",
+    "display": { "label": "HIV Care", "order": 10 }
+  },
+  "terminology": {
+    "concepts": {
+      "cd4_count": "549AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    }
+  },
+  "enrollment": { "enabled": false },
+  "dataSources": {
+    "viral_load_history": {
+      "type": "historical-observations",
+      "conceptAlias": "viral_load",
+      "resultType": "TIMESERIES",
+      "windowDays": 730,
+      "maxResults": 20
+    }
+  },
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [
+      {
+        "id": "overview",
+        "label": "Overview",
+        "widgets": [
+          {
+            "id": "viral-load-trend",
+            "type": "trend-chart",
+            "dataSource": "viral_load_history",
+            "position": { "row": 0, "col": 1, "w": 6, "h": 4 }
+          }
+        ]
+      }
+    ]
+  },
+  "forms": [],
+  "actions": [],
+  "lifecycle": { "completion": { "mode": "MANUAL" }, "onSourceCorrection": "FLAG_FOR_REVIEW" }
+}

@@ -1,0 +1,188 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "CHRONIC_CARE",
+    "display": {
+      "label": "NCD Clinic",
+      "order": 30
+    }
+  },
+  "terminology": {
+    "concepts": {
+      "bp_systolic": "5085AAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "bp_diastolic": "5086AAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "hba1c": "863AAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    "programs": {
+      "ncd_program": "9d2c3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f"
+    },
+    "encounterTypes": {
+      "ncd_clinic_visit": "aa11bb22-cc33-dd44-ee55-ff66aa77bb88"
+    },
+    "forms": {
+      "ncd_followup_form": "bb22cc33-dd44-4ee5-8fa6-0b1c2d3e4f5a"
+    },
+    "codedAnswers": {
+      "diagnosis_hypertension": "4c5d6e7f-8a9b-4c0d-8e1f-2a3b4c5d6e7f"
+    }
+  },
+  "enrollment": {
+    "enabled": true,
+    "triggers": [
+      {
+        "type": "OBSERVATION_SAVED",
+        "conceptAlias": "bp_systolic"
+      },
+      {
+        "type": "ENCOUNTER_SAVED",
+        "encounterTypeAlias": "ncd_clinic_visit"
+      }
+    ],
+    "rules": [
+      {
+        "id": "ncd-eligibility",
+        "action": "PROPOSE_CONFIRMATION",
+        "expression": {
+          "all": [
+            {
+              "any": [
+                {
+                  "type": "observation",
+                  "operator": "GREATER_OR_EQUAL",
+                  "alias": "bp_systolic",
+                  "value": 140,
+                  "windowDays": 90
+                },
+                {
+                  "type": "observation",
+                  "operator": "GREATER_OR_EQUAL",
+                  "alias": "hba1c",
+                  "value": 6.5,
+                  "windowDays": 180
+                }
+              ]
+            },
+            {
+              "not": {
+                "type": "program",
+                "operator": "STATE_EQUALS",
+                "alias": "ncd_program",
+                "value": "ACTIVE"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "manualEnrollment": {
+      "enabled": true,
+      "requiresReason": true
+    },
+    "reenrollment": {
+      "enabled": true,
+      "cooldownDays": 90
+    }
+  },
+  "dataSources": {
+    "bp_history": {
+      "type": "historical-observations",
+      "conceptAlias": "bp_systolic",
+      "resultType": "TIMESERIES",
+      "windowDays": 365,
+      "maxResults": 50,
+      "effectiveTime": "OBS_DATETIME",
+      "units": "mmHg"
+    }
+  },
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [
+      {
+        "id": "overview",
+        "label": "Overview",
+        "widgets": [
+          {
+            "id": "bp-trend",
+            "type": "trend-chart",
+            "dataSource": "bp_history",
+            "position": {
+              "row": 0,
+              "col": 1,
+              "w": 12,
+              "h": 6
+            },
+            "properties": {
+              "title": "Systolic BP trend"
+            }
+          }
+        ]
+      },
+      {
+        "id": "forms",
+        "label": "Forms",
+        "widgets": [
+          {
+            "id": "ncd-follow-up",
+            "type": "form-launcher",
+            "formAlias": "ncd_followup_form",
+            "position": {
+              "row": 0,
+              "col": 1,
+              "w": 6,
+              "h": 2
+            },
+            "properties": {
+              "title": "NCD follow-up"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "forms": [
+    {
+      "alias": "ncd_followup_form",
+      "formUuid": "bb22cc33-dd44-4ee5-8fa6-0b1c2d3e4f5a",
+      "encounterTypeAlias": "ncd_clinic_visit",
+      "required": false
+    }
+  ],
+  "actions": [
+    {
+      "id": "record-ncd-visit",
+      "type": "launch-form",
+      "label": "Record NCD clinic visit",
+      "formAlias": "ncd_followup_form"
+    },
+    {
+      "id": "order-labs",
+      "type": "open-order-entry",
+      "label": "Order investigations",
+      "target": "orders/entry"
+    }
+  ],
+  "pathways": {
+    "enabled": false,
+    "stages": [],
+    "transitions": []
+  },
+  "automation": {
+    "rules": [
+      {
+        "id": "invalidate-bp-widget-on-new-obs",
+        "operation": "INVALIDATE_DATA",
+        "expression": {
+          "type": "observation",
+          "operator": "EXISTS",
+          "alias": "bp_systolic"
+        }
+      }
+    ]
+  },
+  "lifecycle": {
+    "completion": {
+      "mode": "MANUAL"
+    },
+    "onSourceCorrection": "FLAG_FOR_REVIEW"
+  }
+}

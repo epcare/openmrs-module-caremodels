@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epcare.openmrs.org/schemas/action.schema.json",
+  "title": "Workspace action",
+  "description": "Allowlisted action handler reference. Actions never grant permissions; availability conditions only restrict visibility.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "type", "label"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9._-]{0,99}$" },
+    "type": { "enum": ["launch-form", "navigate-internal", "open-order-entry", "open-appointments", "enrollment-transition"] },
+    "label": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "formAlias": { "type": "string", "minLength": 1 },
+    "target": { "type": "string", "maxLength": 200, "pattern": "^[a-z][a-zA-Z0-9._/-]{0,199}$" },
+    "transition": { "enum": ["SUSPEND", "COMPLETE", "WITHDRAW"] },
+    "requiresReason": { "type": "boolean", "default": false },
+    "availabilityRule": { "$ref": "rule-expression.schema.json" }
+  },
+  "allOf": [
+    { "if": { "properties": { "type": { "const": "launch-form" } } }, "then": { "required": ["formAlias"] } },
+    { "if": { "properties": { "type": { "enum": ["navigate-internal", "open-order-entry", "open-appointments"] } } }, "then": { "required": ["target"] } },
+    { "if": { "properties": { "type": { "const": "enrollment-transition" } } }, "then": { "required": ["transition", "requiresReason"] } },
+    { "if": { "properties": { "type": { "const": "enrollment-transition" }, "requiresReason": { "const": true } } },
+      "then": { "properties": { "requiresReason": { "const": true } } } }
+  ]
+}

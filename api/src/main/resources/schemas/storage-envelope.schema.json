@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epcare.openmrs.org/schemas/storage-envelope.schema.json",
+  "title": "Care Model storage envelope",
+  "description": "One editable draft, one published snapshot (checksummed, immutable at API level) and a bounded previous-snapshot history. Stored in care_model.configuration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["storageSchemaVersion", "revision"],
+  "properties": {
+    "storageSchemaVersion": { "const": "1.0.0" },
+    "revision": { "type": "integer", "minimum": 0 },
+    "draft": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["basedOnVersion", "definition"],
+      "properties": {
+        "basedOnVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "definition": { "$ref": "model-definition.schema.json" }
+      }
+    },
+    "published": { "$ref": "#/$defs/snapshot" },
+    "history": {
+      "type": "array",
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/snapshot" }
+    }
+  },
+  "$defs": {
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "checksum", "publishedAt", "definition"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "checksum": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "publishedAt": { "type": "string", "format": "date-time" },
+        "definition": { "$ref": "model-definition.schema.json" }
+      }
+    }
+  }
+}

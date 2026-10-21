@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "CHRONIC_CARE",
+    "display": { "label": "HIV Care", "order": 10 }
+  },
+  "terminology": {
+    "forms": {
+      "art_followup_form": "not-a-valid-uuid"
+    }
+  },
+  "enrollment": { "enabled": false },
+  "dataSources": {},
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [ { "id": "overview", "label": "Overview", "widgets": [] } ]
+  },
+  "forms": [
+    {
+      "alias": "art_followup_form",
+      "formUuid": "not-a-valid-uuid"
+    }
+  ],
+  "actions": [],
+  "lifecycle": { "completion": { "mode": "MANUAL" }, "onSourceCorrection": "FLAG_FOR_REVIEW" }
+}

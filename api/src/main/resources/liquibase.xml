@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9
+                  http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
+
+    <!--
+        Database change sets for Care Models Module.
+        The module owns EXACTLY two tables: care_model and care_model_member. No other module-owned
+        tables may ever be added (no queue, revision, audit, widget or configuration tables).
+        Change set id convention: caremodels-YYYYMMDD-NN-name
+    -->
+
+    <changeSet id="caremodels-20261021-01-care-model" author="slubwama">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="care_model"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="care_model">
+            <column name="care_model_id" type="INT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- OpenMRS metadata fields -->
+            <column name="uuid" type="VARCHAR(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="creator" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="INT"/>
+            <column name="date_changed" type="DATETIME"/>
+            <column name="retired" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="retired_by" type="INT"/>
+            <column name="date_retired" type="DATETIME"/>
+            <column name="retire_reason" type="VARCHAR(255)"/>
+
+            <!-- Business fields -->
+            <column name="code" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <!-- Required model-view privilege name; references the existing OpenMRS privilege table -->
+            <column name="privilege" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revision" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Versioned JSON envelope (draft/published/history); stored as text for portability -->
+            <column name="configuration" type="LONGTEXT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_care_model_privilege" tableName="care_model">
+            <column name="privilege"/>
+        </createIndex>
+        <createIndex indexName="idx_care_model_status" tableName="care_model">
+            <column name="status"/>
+        </createIndex>
+        <createIndex indexName="idx_care_model_retired" tableName="care_model">
+            <column name="retired"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="caremodels-20261021-02-care-model-member" author="slubwama">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="care_model_member"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="care_model_member">
+            <column name="care_model_member_id" type="INT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- OpenMRS data fields (voiding) -->
+            <column name="uuid" type="VARCHAR(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="creator" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="INT"/>
+            <column name="date_changed" type="DATETIME"/>
+            <column name="voided" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="INT"/>
+            <column name="date_voided" type="DATETIME"/>
+            <column name="void_reason" type="VARCHAR(255)"/>
+
+            <!-- Business fields -->
+            <column name="care_model_id" type="INT">
+                <constraints nullable="false" foreignKeyName="fk_care_model_member_model"
+                             references="care_model(care_model_id)"/>
+            </column>
+            <column name="patient_id" type="INT">
+                <constraints nullable="false" foreignKeyName="fk_care_model_member_patient"
+                             references="person(person_id)"/>
+            </column>
+            <column name="status" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="episode_number" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_enrolled" type="DATETIME(6)"/>
+            <column name="date_completed" type="DATETIME(6)"/>
+            <column name="enrollment_source" type="VARCHAR(30)"/>
+            <column name="source_uuid" type="CHAR(38)"/>
+            <column name="membership_data" type="LONGTEXT"/>
+            <column name="version" type="INT"/>
+        </createTable>
+
+        <createIndex indexName="idx_care_model_member_patient_status_voided" tableName="care_model_member">
+            <column name="patient_id"/>
+            <column name="status"/>
+            <column name="voided"/>
+        </createIndex>
+        <createIndex indexName="idx_care_model_member_model_status" tableName="care_model_member">
+            <column name="care_model_id"/>
+            <column name="status"/>
+        </createIndex>
+        <addUniqueConstraint constraintName="uq_care_model_member_episode"
+                             tableName="care_model_member"
+                             columnNames="patient_id, care_model_id, episode_number"/>
+    </changeSet>
+
+    <!--
+        MySQL 8 generated column enforcing at most one current (ACTIVE/SUSPENDED, non-voided)
+        episode per (patient, model) while allowing unlimited historical episodes. NULL current_key
+        values are exempt from the unique index on MySQL.
+        MySQL-only because H2 cannot express generated columns this way; H2-limited test runs rely
+        on service-level checks instead.
+    -->
+    <changeSet id="caremodels-20261021-03-member-current-episode-key" author="slubwama" dbms="mysql">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="care_model_member" columnName="current_key"/>
+            </not>
+        </preConditions>
+        <sql>
+            ALTER TABLE care_model_member
+                ADD COLUMN current_key INT
+                AS (CASE WHEN status IN ('ACTIVE', 'SUSPENDED') AND voided = 0 THEN 1 ELSE NULL END) STORED
+        </sql>
+        <sql>
+            CREATE UNIQUE INDEX uq_care_model_member_current_episode
+                ON care_model_member (patient_id, care_model_id, current_key)
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

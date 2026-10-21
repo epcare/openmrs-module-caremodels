@@ -1,0 +1,60 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
+ * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
+ *
+ * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
+ * graphic logo is a trademark of OpenMRS Inc.
+ */
+package org.openmrs.module.caremodels.api.db;
+
+import java.util.Collection;
+import java.util.List;
+
+import org.openmrs.module.caremodels.dto.CareModelRef;
+import org.openmrs.module.caremodels.model.CareModel;
+import org.openmrs.module.caremodels.model.CareModel.CareModelStatus;
+
+/**
+ * Database access for {@link CareModel}. Queries for the membership listing deliberately do not
+ * select {@code configuration}; the JSON envelope is only loaded on explicit model/workspace
+ * requests.
+ */
+public interface CareModelDAO {
+	
+	CareModel saveCareModel(CareModel careModel);
+	
+	CareModel getCareModelById(Integer id);
+	
+	CareModel getCareModelByUuid(String uuid);
+	
+	CareModel getCareModelByCode(String code);
+	
+	/**
+	 * Search/filter the model registry. Excludes the {@code configuration} envelope.
+	 * 
+	 * @param qStr free-text match on name/code
+	 * @param status optional status filter
+	 * @param includeRetired whether retired models are included
+	 */
+	List<CareModel> getCareModels(String qStr, CareModelStatus status, boolean includeRetired, Integer startIndex,
+	        Integer limit);
+	
+	long getCareModelsCount(String qStr, CareModelStatus status, boolean includeRetired);
+	
+	void purgeCareModel(CareModel careModel);
+	
+	/**
+	 * Metadata projection for the given model, selected without the {@code configuration} column.
+	 * The membership listing path uses this exclusively so the JSON envelope is never fetched.
+	 * 
+	 * @return the projection, or null when no model exists for the id
+	 */
+	CareModelRef getModelRef(Integer careModelId);
+	
+	/**
+	 * Metadata projections for many models in one query; {@code configuration} is never selected.
+	 */
+	List<CareModelRef> getModelRefs(Collection<Integer> careModelIds);
+}

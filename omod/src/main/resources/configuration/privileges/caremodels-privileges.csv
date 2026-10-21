@@ -1,0 +1,5 @@
+Uuid,privilege name,description
+f3a2c1d8-5b4e-4a9f-8c2d-1e6b7a9d0c41,View Care Models,"View the Care Models section on patient charts (Care Models)"
+8d47e6b2-91c3-4f5a-b7d8-2a1c4e6f9b52,Task: caremodels.model.manage,"Create, edit, import and retire Care Models (Care Models)"
+5c9b3f7a-6e2d-4b81-9a4c-3f8d2e7b1c64,Task: caremodels.model.publish,"Validate and publish Care Model versions (Care Models)"
+2e7d9a4b-8f1c-4e63-b5a9-7c4e1f3d8b75,Task: caremodels.member.transition,"Perform audited manual Care Model membership transitions (Care Models)"

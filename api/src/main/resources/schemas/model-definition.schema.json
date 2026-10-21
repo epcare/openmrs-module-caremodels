@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epcare.openmrs.org/schemas/model-definition.schema.json",
+  "title": "Care Model definition",
+  "description": "Canonical Care Model definition. Privileges, facility activation/overrides, executable code and arbitrary URLs are structurally forbidden.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "metadata", "terminology", "enrollment", "dataSources", "workspace", "forms", "actions", "lifecycle"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "display"],
+      "properties": {
+        "category": { "enum": ["CHRONIC_CARE", "MATERNAL", "PREVENTIVE", "SUPPORT"] },
+        "display": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["label"],
+          "properties": {
+            "label": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "order": { "type": "integer", "minimum": 0, "maximum": 1000 }
+          }
+        }
+      }
+    },
+
+    "terminology": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "concepts": { "$ref": "#/$defs/aliasMap" },
+        "programs": { "$ref": "#/$defs/aliasMap" },
+        "encounterTypes": { "$ref": "#/$defs/aliasMap" },
+        "forms": { "$ref": "#/$defs/aliasMap" },
+        "codedAnswers": { "$ref": "#/$defs/aliasMap" }
+      }
+    },
+
+    "enrollment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "triggers": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type"],
+            "properties": {
+              "type": { "enum": ["PROGRAM_CHANGED", "ENCOUNTER_SAVED", "ENCOUNTER_CHANGED", "ENCOUNTER_VOIDED", "OBSERVATION_SAVED", "OBSERVATION_CHANGED", "OBSERVATION_VOIDED"] },
+              "alias": { "type": "string", "minLength": 1 },
+              "conceptAlias": { "type": "string", "minLength": 1 },
+              "encounterTypeAlias": { "type": "string", "minLength": 1 },
+              "programAlias": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "rules": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "action", "expression"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9._-]{0,99}$" },
+              "action": { "enum": ["EXCLUDE", "AUTO_ENROLL", "PROPOSE_CONFIRMATION"] },
+              "expression": { "$ref": "rule-expression.schema.json" }
+            }
+          }
+        },
+        "manualEnrollment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "requiresReason": { "type": "boolean" }
+          }
+        },
+        "reenrollment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "cooldownDays": { "type": "integer", "minimum": 0, "maximum": 3650 }
+          }
+        }
+      }
+    },
+
+    "dataSources": {
+      "type": "object",
+      "maxProperties": 200,
+      "additionalProperties": { "$ref": "data-source.schema.json" }
+    },
+
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tabs"],
+      "properties": {
+        "defaultTab": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,49}$" },
+        "tabs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "widgets"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,49}$" },
+              "label": { "type": "string", "minLength": 1, "maxLength": 100 },
+              "visibilityRule": { "$ref": "rule-expression.schema.json" },
+              "layouts": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "wide": { "$ref": "#/$defs/gridLayout" },
+                  "narrow": { "$ref": "#/$defs/gridLayout" }
+                }
+              },
+              "widgets": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 50,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "type"],
+                  "properties": {
+                    "id": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9._-]{0,99}$" },
+                    "type": { "enum": ["metric", "trend-chart", "clinical-table", "timeline", "form-launcher", "action-panel"] },
+                    "componentVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+                    "dataSource": { "type": "string", "minLength": 1 },
+                    "actionIds": {
+                      "type": "array",
+                      "maxItems": 10,
+                      "items": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9._-]{0,99}$" }
+                    },
+                    "formAlias": { "type": "string", "minLength": 1 },
+                    "position": { "$ref": "#/$defs/gridPosition" },
+                    "properties": { "type": "object", "maxProperties": 30 },
+                    "loadingPolicy": { "enum": ["ON_VISIBLE", "EAGER"], "default": "ON_VISIBLE" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "forms": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "$ref": "form-ref.schema.json" }
+    },
+
+    "actions": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "$ref": "action.schema.json" }
+    },
+
+    "pathways": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "stages": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9._-]{0,99}$" },
+              "label": { "type": "string", "minLength": 1, "maxLength": 100 }
+            }
+          }
+        },
+        "transitions": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to"],
+            "properties": {
+              "from": { "type": "string", "minLength": 1 },
+              "to": { "type": "string", "minLength": 1 },
+              "expression": { "$ref": "rule-expression.schema.json" }
+            }
+          }
+        }
+      }
+    },
+
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rules"],
+      "properties": {
+        "rules": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "operation", "expression"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9._-]{0,99}$" },
+              "operation": { "enum": ["INVALIDATE_DATA", "PROPOSE_ENROLLMENT", "FLAG_FOR_REVIEW"] },
+              "expression": { "$ref": "rule-expression.schema.json" }
+            }
+          }
+        }
+      }
+    },
+
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completion", "onSourceCorrection"],
+      "properties": {
+        "completion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "enum": ["MANUAL", "RULE"] },
+            "ruleId": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9._-]{0,99}$" }
+          }
+        },
+        "onSourceCorrection": { "enum": ["FLAG_FOR_REVIEW", "AUTO_TRANSITION"] }
+      }
+    }
+  },
+
+  "$defs": {
+    "aliasMap": {
+      "type": "object",
+      "maxProperties": 200,
+      "additionalProperties": { "$ref": "#/$defs/openmrsUuid" }
+    },
+    "openmrsUuid": {
+      "anyOf": [
+        { "type": "string", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+        { "type": "string", "pattern": "^[0-9a-fA-F]{32}$", "description": "CIEL-style non-dashed OpenMRS UUID" }
+      ]
+    },
+    "gridPosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["row", "col", "w", "h"],
+      "properties": {
+        "row": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "col": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "w": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "h": { "type": "integer", "minimum": 1, "maximum": 20 }
+      }
+    },
+    "gridLayout": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["widgetId", "row", "col", "w", "h"],
+        "properties": {
+          "widgetId": { "type": "string", "minLength": 1 },
+          "row": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "col": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "w": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "h": { "type": "integer", "minimum": 1, "maximum": 20 }
+        }
+      }
+    }
+  }
+}

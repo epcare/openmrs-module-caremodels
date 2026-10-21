@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "CHRONIC_CARE",
+    "display": { "label": "Malaria", "order": 40 }
+  },
+  "terminology": {},
+  "enrollment": { "enabled": false },
+  "dataSources": {},
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [
+      {
+        "id": "overview",
+        "label": "Overview",
+        "widgets": [
+          {
+            "id": "parasite-metric",
+            "type": "custom-malaria-widget",
+            "position": { "row": 0, "col": 1, "w": 4, "h": 2 }
+          }
+        ]
+      }
+    ]
+  },
+  "forms": [],
+  "actions": [],
+  "lifecycle": { "completion": { "mode": "MANUAL" }, "onSourceCorrection": "FLAG_FOR_REVIEW" }
+}

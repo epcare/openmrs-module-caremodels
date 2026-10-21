@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "CHRONIC_CARE",
+    "display": { "label": "HIV Care", "order": 10 },
+    "privilege": "View Care Models"
+  },
+  "terminology": {},
+  "enrollment": { "enabled": false },
+  "dataSources": {},
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [ { "id": "overview", "label": "Overview", "widgets": [] } ]
+  },
+  "forms": [],
+  "actions": [],
+  "lifecycle": { "completion": { "mode": "MANUAL" }, "onSourceCorrection": "FLAG_FOR_REVIEW" }
+}

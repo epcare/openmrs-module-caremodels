@@ -1,0 +1,251 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "CHRONIC_CARE",
+    "display": {
+      "label": "HIV Care",
+      "order": 10
+    }
+  },
+  "terminology": {
+    "concepts": {
+      "art_status": "160429AAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "viral_load": "856AAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "cd4_count": "549AAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    "programs": {
+      "hiv_program": "ca8f7fab-6d50-41a0-9c6d-7aabff9d7f3d"
+    },
+    "encounterTypes": {
+      "hiv_followup": "61f97916-0433-40e4-8c14-6e5e8b6b7f4a"
+    },
+    "forms": {
+      "art_followup_form": "7f5b6f4e-9a3c-4b7d-8e2a-1c5d9f0e3b76"
+    },
+    "codedAnswers": {
+      "on_art": "160430AAAAAAAAAAAAAAAAAAAAAAAAAA"
+    }
+  },
+  "enrollment": {
+    "enabled": true,
+    "triggers": [
+      {
+        "type": "PROGRAM_CHANGED",
+        "programAlias": "hiv_program"
+      }
+    ],
+    "rules": [
+      {
+        "id": "auto-enroll-on-hiv-program",
+        "action": "AUTO_ENROLL",
+        "expression": {
+          "type": "program",
+          "operator": "STATE_EQUALS",
+          "alias": "hiv_program",
+          "value": "ACTIVE"
+        }
+      },
+      {
+        "id": "exclude-if-transferred-out",
+        "action": "EXCLUDE",
+        "expression": {
+          "type": "program",
+          "operator": "STATE_EQUALS",
+          "alias": "hiv_program",
+          "value": "TRANSFERRED_OUT"
+        }
+      }
+    ],
+    "manualEnrollment": {
+      "enabled": true,
+      "requiresReason": true
+    },
+    "reenrollment": {
+      "enabled": true,
+      "cooldownDays": 30
+    }
+  },
+  "dataSources": {
+    "art_status_latest": {
+      "type": "latest-observation",
+      "conceptAlias": "art_status",
+      "resultType": "CODED",
+      "effectiveTime": "OBS_DATETIME",
+      "maxResults": 1
+    },
+    "viral_load_history": {
+      "type": "historical-observations",
+      "conceptAlias": "viral_load",
+      "resultType": "TIMESERIES",
+      "windowDays": 730,
+      "maxResults": 20,
+      "effectiveTime": "OBS_DATETIME",
+      "units": "copies/ml"
+    },
+    "cd4_latest": {
+      "type": "latest-observation",
+      "conceptAlias": "cd4_count",
+      "resultType": "NUMBER",
+      "effectiveTime": "OBS_DATETIME",
+      "maxResults": 1
+    }
+  },
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [
+      {
+        "id": "overview",
+        "label": "Overview",
+        "layouts": {
+          "wide": [
+            {
+              "widgetId": "art-status-metric",
+              "row": 0,
+              "col": 1,
+              "w": 3,
+              "h": 2
+            },
+            {
+              "widgetId": "cd4-metric",
+              "row": 0,
+              "col": 4,
+              "w": 3,
+              "h": 2
+            },
+            {
+              "widgetId": "viral-load-trend",
+              "row": 2,
+              "col": 1,
+              "w": 6,
+              "h": 4
+            }
+          ]
+        },
+        "widgets": [
+          {
+            "id": "art-status-metric",
+            "type": "metric",
+            "dataSource": "art_status_latest",
+            "position": {
+              "row": 0,
+              "col": 1,
+              "w": 3,
+              "h": 2
+            },
+            "properties": {
+              "title": "ART status"
+            }
+          },
+          {
+            "id": "cd4-metric",
+            "type": "metric",
+            "dataSource": "cd4_latest",
+            "position": {
+              "row": 0,
+              "col": 4,
+              "w": 3,
+              "h": 2
+            },
+            "properties": {
+              "title": "Latest CD4"
+            }
+          },
+          {
+            "id": "viral-load-trend",
+            "type": "trend-chart",
+            "dataSource": "viral_load_history",
+            "position": {
+              "row": 2,
+              "col": 1,
+              "w": 6,
+              "h": 4
+            },
+            "properties": {
+              "title": "Viral load"
+            }
+          }
+        ]
+      },
+      {
+        "id": "history",
+        "label": "History",
+        "widgets": [
+          {
+            "id": "viral-load-table",
+            "type": "clinical-table",
+            "dataSource": "viral_load_history",
+            "position": {
+              "row": 0,
+              "col": 1,
+              "w": 12,
+              "h": 6
+            }
+          }
+        ]
+      },
+      {
+        "id": "forms",
+        "label": "Forms",
+        "widgets": [
+          {
+            "id": "art-follow-up",
+            "type": "form-launcher",
+            "formAlias": "art_followup_form",
+            "position": {
+              "row": 0,
+              "col": 1,
+              "w": 6,
+              "h": 2
+            },
+            "properties": {
+              "title": "ART follow-up"
+            }
+          },
+          {
+            "id": "art-actions",
+            "type": "action-panel",
+            "actionIds": [
+              "start-art-form"
+            ],
+            "position": {
+              "row": 2,
+              "col": 1,
+              "w": 6,
+              "h": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "forms": [
+    {
+      "alias": "art_followup_form",
+      "formUuid": "7f5b6f4e-9a3c-4b7d-8e2a-1c5d9f0e3b76",
+      "encounterTypeAlias": "hiv_followup",
+      "required": false
+    }
+  ],
+  "actions": [
+    {
+      "id": "start-art-form",
+      "type": "launch-form",
+      "label": "Start ART follow-up",
+      "formAlias": "art_followup_form"
+    }
+  ],
+  "pathways": {
+    "enabled": false,
+    "stages": [],
+    "transitions": []
+  },
+  "automation": {
+    "rules": []
+  },
+  "lifecycle": {
+    "completion": {
+      "mode": "MANUAL"
+    },
+    "onSourceCorrection": "FLAG_FOR_REVIEW"
+  }
+}

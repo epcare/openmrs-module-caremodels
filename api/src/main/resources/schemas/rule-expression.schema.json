@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epcare.openmrs.org/schemas/rule-expression.schema.json",
+  "title": "Enrollment rule expression",
+  "description": "Nested all/any/not over typed predicates with tristate semantics (TRUE/FALSE/UNKNOWN). Missing evidence is UNKNOWN, never false.",
+  "$defs": {
+    "expression": {
+      "oneOf": [
+        { "$ref": "#/$defs/all" },
+        { "$ref": "#/$defs/any" },
+        { "$ref": "#/$defs/not" },
+        { "$ref": "#/$defs/predicate" },
+        { "$ref": "#/$defs/literal" }
+      ]
+    },
+    "all": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["all"],
+      "properties": {
+        "all": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "$ref": "#/$defs/expression" } }
+      }
+    },
+    "any": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["any"],
+      "properties": {
+        "any": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "$ref": "#/$defs/expression" } }
+      }
+    },
+    "not": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["not"],
+      "properties": {
+        "not": { "$ref": "#/$defs/expression" }
+      }
+    },
+    "literal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["literal"],
+      "properties": {
+        "literal": { "enum": ["TRUE", "FALSE"] }
+      }
+    },
+    "predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "operator"],
+      "properties": {
+        "type": { "enum": ["program", "encounter", "observation", "enrollment"] },
+        "operator": {
+          "enum": ["EXISTS", "NOT_EXISTS", "EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN",
+            "GREATER_OR_EQUAL", "LESS_OR_EQUAL", "WITHIN_WINDOW", "OUTSIDE_WINDOW", "STATE_EQUALS"]
+        },
+        "alias": { "type": "string", "minLength": 1 },
+        "value": { "type": ["string", "number", "boolean"] },
+        "unit": { "type": "string", "maxLength": 20 },
+        "windowDays": { "type": "integer", "minimum": 1, "maximum": 3650 },
+        "codedAnswerAlias": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        { "if": { "properties": { "operator": { "enum": ["EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN", "GREATER_OR_EQUAL", "LESS_OR_EQUAL", "WITHIN_WINDOW", "OUTSIDE_WINDOW"] } } }, "then": { "required": ["alias", "value"] } },
+        { "if": { "properties": { "operator": { "enum": ["STATE_EQUALS"] } } }, "then": { "required": ["alias", "value"] } },
+        { "if": { "properties": { "operator": { "enum": ["WITHIN_WINDOW", "OUTSIDE_WINDOW"] } } }, "then": { "required": ["windowDays"] } }
+      ]
+    }
+  },
+  "$ref": "#/$defs/expression"
+}

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "category": "SUPPORT",
+    "display": { "label": "Minimal", "order": 99 }
+  },
+  "terminology": {},
+  "enrollment": {
+    "enabled": false,
+    "manualEnrollment": { "enabled": false, "requiresReason": true }
+  },
+  "dataSources": {},
+  "workspace": {
+    "defaultTab": "overview",
+    "tabs": [
+      {
+        "id": "overview",
+        "label": "Overview",
+        "widgets": []
+      }
+    ]
+  },
+  "forms": [],
+  "actions": [],
+  "pathways": { "enabled": false, "stages": [], "transitions": [] },
+  "automation": { "rules": [] },
+  "lifecycle": {
+    "completion": { "mode": "MANUAL" },
+    "onSourceCorrection": "FLAG_FOR_REVIEW"
+  }
+}
