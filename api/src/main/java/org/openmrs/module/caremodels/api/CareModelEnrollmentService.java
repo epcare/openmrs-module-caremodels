@@ -29,6 +29,10 @@ public interface CareModelEnrollmentService extends OpenmrsService {
 	CareModelMember applyRuleEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
 	        String sourceUuid, Date asOf) throws APIException;
 
+	/** Flags every enrollment created from corrected or voided source evidence for human review. */
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	int flagEnrollmentsForReview(Integer patientId, String sourceUuid, String reason, Date asOf) throws APIException;
+
 	/** Accepts a pending confirmation proposal and activates its episode. */
 	@Transactional
 	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)

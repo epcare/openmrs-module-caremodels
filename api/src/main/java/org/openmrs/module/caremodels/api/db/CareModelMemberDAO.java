@@ -32,6 +32,9 @@ public interface CareModelMemberDAO {
 	/** Finds a prior rule-driven enrollment for idempotent event replay. */
 	CareModelMember getMemberBySource(Integer patientId, Integer careModelId, String sourceUuid);
 
+	/** Locks every non-voided episode created from one clinical evidence source. */
+	List<CareModelMember> getMembersBySourceForUpdate(Integer patientId, String sourceUuid);
+
 	/** Current proposal or enrolled episode, excluding completed/declined/erroneous history. */
 	CareModelMember getOpenMember(Integer patientId, Integer careModelId);
 

@@ -76,6 +76,16 @@ public class ClinicalChangeEnrollmentProcessor implements ClinicalChangeListener
 			log.warning("Ignoring clinical change for missing patient " + event.getPatientUuid());
 			return;
 		}
+		if (event.getReviewSourceUuid() != null) {
+			try {
+				enrollmentService.flagEnrollmentsForReview(patientId, event.getReviewSourceUuid(),
+				    reviewReason(event.getTriggerType()), event.getOccurredAt());
+			}
+			catch (RuntimeException e) {
+				log.log(Level.SEVERE, "Failed to flag corrected or voided enrollment source " + event.getReviewSourceUuid(),
+				    e);
+			}
+		}
 
 		List<CareModel> models = careModelDAO.getPublishedCareModelsForEnrollment();
 		for (CareModel model : models) {
@@ -87,6 +97,10 @@ public class ClinicalChangeEnrollmentProcessor implements ClinicalChangeListener
 				        + event.getSourceUuid(), e);
 			}
 		}
+	}
+
+	private String reviewReason(ClinicalChangeEvent.TriggerType triggerType) {
+		return "Enrollment source evidence was corrected or voided (" + triggerType.name() + ")";
 	}
 
 	private void evaluateModel(Integer patientId, CareModel model, ClinicalChangeEvent event) {

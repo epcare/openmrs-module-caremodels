@@ -118,6 +118,28 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 
 	@Override
 	@Transactional
+	public int flagEnrollmentsForReview(Integer patientId, String sourceUuid, String reason, Date asOf) throws APIException {
+		if (patientId == null) {
+			throw new APIException("Patient id is required");
+		}
+		assertSourceUuid(sourceUuid);
+		assertReason(reason);
+		Date effectiveAt = effectiveDate(asOf);
+		int flagged = 0;
+		for (CareModelMember member : memberDAO.getMembersBySourceForUpdate(patientId, sourceUuid)) {
+			if (hasReviewFlag(member.getMembershipData(), sourceUuid)) {
+				continue;
+			}
+			member.setMembershipData(appendHistory(member.getMembershipData(), "FLAGGED_FOR_REVIEW", effectiveAt, reason,
+			    sourceUuid));
+			memberDAO.saveCareModelMember(member);
+			flagged++;
+		}
+		return flagged;
+	}
+
+	@Override
+	@Transactional
 	public CareModelMember confirmEnrollment(String memberUuid, String reason, Date asOf) throws APIException {
 		assertText(memberUuid, "Membership UUID is required");
 		assertReason(reason);
@@ -380,6 +402,16 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		ObjectNode root = readMembershipData(json);
 		appendHistory(history(root), type, at, reason, sourceUuid);
 		return writeJson(root);
+	}
+
+	private boolean hasReviewFlag(String json, String sourceUuid) {
+		for (JsonNode event : history(readMembershipData(json))) {
+			if ("FLAGGED_FOR_REVIEW".equals(event.path("type").asText())
+			        && sourceUuid.equals(event.path("sourceUuid").asText(null))) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void appendHistory(ArrayNode history, String type, Date at, String reason, String sourceUuid) {

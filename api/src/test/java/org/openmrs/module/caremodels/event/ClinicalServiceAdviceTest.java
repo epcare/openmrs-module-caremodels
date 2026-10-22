@@ -39,7 +39,7 @@ public class ClinicalServiceAdviceTest {
 		Encounter encounter = encounter();
 		Method method = EncounterService.class.getMethod("saveEncounter", Encounter.class);
 		new EncounterServiceAdvice(publisher).invoke(invocation(method, new Object[] { encounter }, encounter));
-		assertEvent(ClinicalChangeEvent.TriggerType.ENCOUNTER_SAVED, "encounter", "encounter-type");
+		assertEvent(ClinicalChangeEvent.TriggerType.ENCOUNTER_SAVED, "encounter", "encounter-type", null);
 	}
 
 	@Test
@@ -48,18 +48,20 @@ public class ClinicalServiceAdviceTest {
 		encounter.setEncounterId(12);
 		Method save = EncounterService.class.getMethod("saveEncounter", Encounter.class);
 		new EncounterServiceAdvice(publisher).invoke(invocation(save, new Object[] { encounter }, encounter));
-		assertEvent(ClinicalChangeEvent.TriggerType.ENCOUNTER_CHANGED, "encounter", "encounter-type");
+		assertEvent(ClinicalChangeEvent.TriggerType.ENCOUNTER_CHANGED, "encounter", "encounter-type", "encounter");
 	}
 
 	@Test
 	public void shouldClassifyObservationCorrectionAsChanged() throws Throwable {
 		Obs previous = observation();
 		previous.setObsId(8);
+		previous.setUuid("original-obs");
 		Obs correction = observation();
+		correction.setUuid("replacement-obs");
 		correction.setPreviousVersion(previous);
 		Method method = ObsService.class.getMethod("saveObs", Obs.class, String.class);
 		new ObsServiceAdvice(publisher).invoke(invocation(method, new Object[] { correction, "correction" }, correction));
-		assertEvent(ClinicalChangeEvent.TriggerType.OBSERVATION_CHANGED, "obs", "concept");
+		assertEvent(ClinicalChangeEvent.TriggerType.OBSERVATION_CHANGED, "replacement-obs", "concept", "original-obs");
 	}
 
 	@Test
@@ -68,7 +70,7 @@ public class ClinicalServiceAdviceTest {
 		Method method = ProgramWorkflowService.class.getMethod("voidPatientProgram", PatientProgram.class, String.class);
 		new ProgramWorkflowServiceAdvice(publisher).invoke(invocation(method, new Object[] { patientProgram,
 		        "entered in error" }, patientProgram));
-		assertEvent(ClinicalChangeEvent.TriggerType.PROGRAM_CHANGED, "patient-program", "program");
+		assertEvent(ClinicalChangeEvent.TriggerType.PROGRAM_CHANGED, "patient-program", "program", "patient-program");
 	}
 
 	@Test(expected = IllegalStateException.class)
@@ -83,13 +85,15 @@ public class ClinicalServiceAdviceTest {
 		}
 	}
 
-	private void assertEvent(ClinicalChangeEvent.TriggerType type, String sourceUuid, String referenceUuid) {
+	private void assertEvent(ClinicalChangeEvent.TriggerType type, String sourceUuid, String referenceUuid,
+	        String reviewSourceUuid) {
 		assertEquals(1, received.size());
 		ClinicalChangeEvent event = received.remove(0);
 		assertEquals(type, event.getTriggerType());
 		assertEquals("patient", event.getPatientUuid());
 		assertEquals(sourceUuid, event.getSourceUuid());
 		assertEquals(referenceUuid, event.getReferenceUuid());
+		assertEquals(reviewSourceUuid, event.getReviewSourceUuid());
 	}
 
 	private ClinicalChangePublisher publisher() {
