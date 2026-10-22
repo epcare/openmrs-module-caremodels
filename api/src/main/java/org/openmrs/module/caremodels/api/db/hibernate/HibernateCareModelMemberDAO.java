@@ -12,6 +12,7 @@ package org.openmrs.module.caremodels.api.db.hibernate;
 import java.util.List;
 
 import org.hibernate.Criteria;
+import org.hibernate.LockMode;
 import org.openmrs.api.db.hibernate.DbSessionFactory;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Projections;
@@ -54,11 +55,25 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 	}
 
 	@Override
+	public CareModelMember getCareModelMemberByUuidForUpdate(String uuid) {
+		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
+		        .add(Restrictions.eq("uuid", uuid)).setLockMode(LockMode.PESSIMISTIC_WRITE).uniqueResult();
+	}
+
+	@Override
 	public CareModelMember getMemberBySource(Integer patientId, Integer careModelId, String sourceUuid) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
 		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("careModelId", careModelId))
 		        .add(Restrictions.eq("sourceUuid", sourceUuid)).addOrder(Order.desc("episodeNumber")).setMaxResults(1)
 		        .uniqueResult();
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public List<CareModelMember> getMembersBySourceForUpdate(Integer patientId, String sourceUuid) {
+		return sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
+		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("sourceUuid", sourceUuid))
+		        .add(Restrictions.eq("voided", false)).setLockMode(LockMode.PESSIMISTIC_WRITE).list();
 	}
 
 	@Override

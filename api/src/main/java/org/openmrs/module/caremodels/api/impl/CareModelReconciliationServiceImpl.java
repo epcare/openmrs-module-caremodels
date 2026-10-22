@@ -27,33 +27,33 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** One model and at most 100 patient IDs per transaction; checkpoint reuses core global_property. */
 public class CareModelReconciliationServiceImpl extends BaseOpenmrsService implements CareModelReconciliationService {
-
+	
 	private final ObjectMapper mapper = new ObjectMapper();
-
+	
 	private CareModelDAO modelDAO;
-
+	
 	private CareModelMemberDAO memberDAO;
-
+	
 	private CareModelEnrollmentService enrollment;
-
+	
 	private EnrollmentRuleEvidenceFactory evidence;
-
+	
 	public void setCareModelDAO(CareModelDAO dao) {
 		modelDAO = dao;
 	}
-
+	
 	public void setMemberDAO(CareModelMemberDAO dao) {
 		memberDAO = dao;
 	}
-
+	
 	public void setEnrollmentService(CareModelEnrollmentService service) {
 		enrollment = service;
 	}
-
+	
 	public void setEvidenceFactory(EnrollmentRuleEvidenceFactory factory) {
 		evidence = factory;
 	}
-
+	
 	@Override @Transactional(timeout = 30)
     public int reconcileNextBatch(int limit) {
         if (limit < 1 || limit > 100) throw new IllegalArgumentException("Batch size must be 1..100");
@@ -92,7 +92,7 @@ public class CareModelReconciliationServiceImpl extends BaseOpenmrsService imple
             return patients.size();
         } catch (java.io.IOException | ClassCastException e) { throw new APIException("Invalid reconciliation checkpoint; reset it explicitly", e); }
     }
-
+	
 	private void reconcile(Integer patientId, CareModel model, StorageEnvelope.PublishedSnapshot published, Date asOf) {
         JsonNode definition = published.getDefinition();
         if (!definition.path("enrollment").path("enabled").asBoolean()) return;
@@ -114,9 +114,8 @@ public class CareModelReconciliationServiceImpl extends BaseOpenmrsService imple
             int next = memberDAO.getNextEpisodeNumber(patientId, model.getId());
             String source = UUID.nameUUIDFromBytes((patientId + ":" + model.getId() + ":" + published.getChecksum() + ":" + next).getBytes(StandardCharsets.UTF_8)).toString();
             enrollment.applyRuleEnrollment(patientId, model.getId(), decision.getSelected().getRuleId(), decision.getSelected().getAction(), source, asOf);
-        } else if (current != null && !"MANUAL".equals(current.getEnrollmentSource())) {
-            String source = UUID.nameUUIDFromBytes(("review:" + current.getUuid() + ":" + published.getChecksum()).getBytes(StandardCharsets.UTF_8)).toString();
-            enrollment.flagForReview(patientId, model.getId(), source, asOf);
+        } else if (current != null && !"MANUAL".equals(current.getEnrollmentSource()) && current.getSourceUuid() != null) {
+            enrollment.flagEnrollmentsForReview(patientId, current.getSourceUuid(), "Reconciliation flagged this enrollment for review", asOf);
         }
     }
 }

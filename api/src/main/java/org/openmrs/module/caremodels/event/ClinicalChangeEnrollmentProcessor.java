@@ -26,45 +26,45 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Evaluates a committed clinical change against every matching published Care Model. */
 public class ClinicalChangeEnrollmentProcessor implements ClinicalChangeListener {
-
+	
 	private static final Logger log = Logger.getLogger(ClinicalChangeEnrollmentProcessor.class.getName());
-
+	
 	private CareModelDAO careModelDAO;
-
+	
 	private EnrollmentTriggerMatcher triggerMatcher;
-
+	
 	private EnrollmentRuleEngine ruleEngine;
-
+	
 	private EnrollmentRuleEvidenceFactory evidenceFactory;
-
+	
 	private CareModelEnrollmentService enrollmentService;
-
+	
 	private ObjectMapper objectMapper = new ObjectMapper();
-
+	
 	public void setCareModelDAO(CareModelDAO careModelDAO) {
 		this.careModelDAO = careModelDAO;
 	}
-
+	
 	public void setTriggerMatcher(EnrollmentTriggerMatcher triggerMatcher) {
 		this.triggerMatcher = triggerMatcher;
 	}
-
+	
 	public void setRuleEngine(EnrollmentRuleEngine ruleEngine) {
 		this.ruleEngine = ruleEngine;
 	}
-
+	
 	public void setEvidenceFactory(EnrollmentRuleEvidenceFactory evidenceFactory) {
 		this.evidenceFactory = evidenceFactory;
 	}
-
+	
 	public void setEnrollmentService(CareModelEnrollmentService enrollmentService) {
 		this.enrollmentService = enrollmentService;
 	}
-
+	
 	public void setObjectMapper(ObjectMapper objectMapper) {
 		this.objectMapper = objectMapper;
 	}
-
+	
 	@Override
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void onClinicalChange(ClinicalChangeEvent event) {
@@ -76,7 +76,17 @@ public class ClinicalChangeEnrollmentProcessor implements ClinicalChangeListener
 			log.warning("Ignoring clinical change: patient unavailable");
 			return;
 		}
-
+		if (event.getReviewSourceUuid() != null) {
+			try {
+				enrollmentService.flagEnrollmentsForReview(patientId, event.getReviewSourceUuid(),
+				    reviewReason(event.getTriggerType()), event.getOccurredAt());
+			}
+			catch (RuntimeException e) {
+				log.log(Level.SEVERE, "Failed to flag corrected or voided enrollment source " + event.getReviewSourceUuid(),
+				    e);
+			}
+		}
+		
 		List<CareModel> models = careModelDAO.getPublishedCareModelsForEnrollment();
 		for (CareModel model : models) {
 			try {
@@ -88,20 +98,21 @@ public class ClinicalChangeEnrollmentProcessor implements ClinicalChangeListener
 			}
 		}
 	}
-
+	
+	private String reviewReason(ClinicalChangeEvent.TriggerType triggerType) {
+		return "Enrollment source evidence was corrected or voided (" + triggerType.name() + ")";
+	}
+	
 	private void evaluateModel(Integer patientId, CareModel model, ClinicalChangeEvent event) {
 		StorageEnvelope envelope = StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
 		if (envelope.getPublished() == null || envelope.getPublished().getDefinition() == null) {
 			return;
 		}
 		JsonNode definition = envelope.getPublished().getDefinition();
-		if (triggerMatcher.matchesCorrection(definition, event)) {
-			enrollmentService.flagForReview(patientId, model.getId(), event.getSourceUuid(), event.getOccurredAt());
-		}
 		if (!triggerMatcher.matches(definition, event)) {
 			return;
 		}
-
+		
 		RuleEvidenceProvider evidence = evidenceFactory.create(patientId, definition, event.getOccurredAt());
 		Decision decision = ruleEngine
 		        .evaluate(definition.path("enrollment").path("rules"), evidence, event.getOccurredAt());

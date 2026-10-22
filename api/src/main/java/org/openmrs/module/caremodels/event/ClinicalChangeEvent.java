@@ -23,15 +23,23 @@ public final class ClinicalChangeEvent {
 
 	private final String referenceUuid;
 
+	private final String reviewSourceUuid;
+
 	private final Date occurredAt;
 
 	public ClinicalChangeEvent(TriggerType triggerType, String patientUuid, String sourceUuid, String referenceUuid,
 	    Date occurredAt) {
+		this(triggerType, patientUuid, sourceUuid, referenceUuid, occurredAt, null);
+	}
+
+	public ClinicalChangeEvent(TriggerType triggerType, String patientUuid, String sourceUuid, String referenceUuid,
+	    Date occurredAt, String reviewSourceUuid) {
 		this.triggerType = Objects.requireNonNull(triggerType, "triggerType");
 		this.patientUuid = Objects.requireNonNull(patientUuid, "patientUuid");
 		this.sourceUuid = Objects.requireNonNull(sourceUuid, "sourceUuid");
 		this.referenceUuid = Objects.requireNonNull(referenceUuid, "referenceUuid");
 		this.occurredAt = new Date(Objects.requireNonNull(occurredAt, "occurredAt").getTime());
+		this.reviewSourceUuid = reviewSourceUuid;
 	}
 
 	public TriggerType getTriggerType() {
@@ -53,5 +61,10 @@ public final class ClinicalChangeEvent {
 
 	public Date getOccurredAt() {
 		return new Date(occurredAt.getTime());
+	}
+
+	/** The prior or voided evidence UUID whose rule-driven memberships require human review. */
+	public String getReviewSourceUuid() {
+		return reviewSourceUuid;
 	}
 }

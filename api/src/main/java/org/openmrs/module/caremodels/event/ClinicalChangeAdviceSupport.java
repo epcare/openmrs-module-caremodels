@@ -21,9 +21,14 @@ abstract class ClinicalChangeAdviceSupport {
 	}
 
 	void publish(ClinicalChangeEvent.TriggerType type, String patientUuid, String sourceUuid, String referenceUuid) {
+		publish(type, patientUuid, sourceUuid, referenceUuid, null);
+	}
+
+	void publish(ClinicalChangeEvent.TriggerType type, String patientUuid, String sourceUuid, String referenceUuid,
+	        String reviewSourceUuid) {
 		if (patientUuid != null && sourceUuid != null && referenceUuid != null) {
-			publisher()
-			        .publishAfterCommit(new ClinicalChangeEvent(type, patientUuid, sourceUuid, referenceUuid, new Date()));
+			publisher().publishAfterCommit(
+			    new ClinicalChangeEvent(type, patientUuid, sourceUuid, referenceUuid, new Date(), reviewSourceUuid));
 		}
 	}
 

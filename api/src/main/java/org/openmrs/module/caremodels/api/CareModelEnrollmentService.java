@@ -15,6 +15,7 @@ import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
 import org.openmrs.api.OpenmrsService;
 import org.openmrs.module.caremodels.model.CareModelMember;
+import org.openmrs.module.caremodels.model.CareModelMember.MemberStatus;
 import org.openmrs.module.caremodels.rule.EnrollmentRuleEngine.Action;
 import org.openmrs.module.caremodels.security.CareModelsPrivileges;
 import org.springframework.transaction.annotation.Propagation;
@@ -22,30 +23,41 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Transactional, idempotent entry points for every supported membership enrollment flow. */
 public interface CareModelEnrollmentService extends OpenmrsService {
-
+	
 	/** Applies a validated published rule decision. Replaying the same source UUID is a no-op. */
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	CareModelMember applyRuleEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
 	        String sourceUuid, Date asOf) throws APIException;
-
-    /** Internal event/recovery hook: append review evidence without changing clinical membership state. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    default void flagForReview(Integer patientId, Integer careModelId, String sourceUuid, Date asOf) {
-        throw new UnsupportedOperationException("Review persistence is not configured");
-    }
-
+	
+	/** Flags every enrollment created from corrected or voided source evidence for human review. */
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	int flagEnrollmentsForReview(Integer patientId, String sourceUuid, String reason, Date asOf) throws APIException;
+	
 	/** Accepts a pending confirmation proposal and activates its episode. */
 	@Transactional
 	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
 	CareModelMember confirmEnrollment(String memberUuid, String reason, Date asOf) throws APIException;
-
+	
 	/** Declines a pending confirmation proposal while retaining its audit record. */
 	@Transactional
 	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
 	CareModelMember declineEnrollment(String memberUuid, String reason, Date asOf) throws APIException;
-
+	
 	/** Creates an ACTIVE manual episode only when the published definition permits it. */
 	@Transactional
 	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
 	CareModelMember enrollManually(Integer patientId, Integer careModelId, String reason, Date asOf) throws APIException;
+	
+	/**
+	 * Resolves stable external identifiers before applying the same guarded manual enrollment flow.
+	 */
+	@Transactional
+	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
+	CareModelMember enrollManually(String patientUuid, String modelCodeOrUuid, String reason, Date asOf) throws APIException;
+	
+	/** Applies an audited lifecycle transition to an ACTIVE or SUSPENDED episode. */
+	@Transactional
+	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
+	CareModelMember transitionEnrollment(String memberUuid, MemberStatus newStatus, String reason, Date asOf)
+	        throws APIException;
 }

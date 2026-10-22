@@ -15,6 +15,7 @@ import java.util.List;
 import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
+import org.openmrs.module.caremodels.api.CareModelEnrollmentService;
 import org.openmrs.module.caremodels.api.CareModelMemberService;
 import org.openmrs.module.caremodels.api.db.CareModelMemberDAO;
 import org.openmrs.module.caremodels.model.CareModelMember;
@@ -27,12 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class CareModelMemberServiceImpl extends BaseOpenmrsService implements CareModelMemberService {
 
 	private CareModelMemberDAO dao;
-
-	private org.openmrs.module.caremodels.api.db.CareModelDAO careModelDAO;
-
-	public void setCareModelDAO(org.openmrs.module.caremodels.api.db.CareModelDAO dao) {
-		this.careModelDAO = dao;
-	}
+	
+	private CareModelEnrollmentService enrollmentService;
 
 	public CareModelMemberDAO getDao() {
 		return dao;
@@ -40,6 +37,10 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 
 	public void setDao(CareModelMemberDAO dao) {
 		this.dao = dao;
+	}
+	
+	public void setEnrollmentService(CareModelEnrollmentService enrollmentService) {
+		this.enrollmentService = enrollmentService;
 	}
 
 	@Override
@@ -107,41 +108,10 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 	@Transactional
 	public CareModelMember transitionMember(CareModelMember member, MemberStatus newStatus, String reason, Date asOf)
 	        throws APIException {
-		if (reason == null || reason.trim().isEmpty() || reason.length() > 500)
-			throw new APIException("A reason of at most 500 characters is required");
-		if (member == null || member.getId() == null || member.getCareModelId() == null)
-			throw new APIException("A persisted membership is required");
-		org.openmrs.module.caremodels.model.CareModel model = careModelDAO
-		        .getCareModelByIdForUpdate(member.getCareModelId());
-		CareModelMember stored = dao.getCareModelMemberById(member.getId());
-		if (model == null || stored == null || Boolean.TRUE.equals(stored.getVoided())
-		        || !model.getId().equals(stored.getCareModelId()))
-			throw new APIException("Membership unavailable");
-		if (newStatus == null)
-			throw new APIException("Target status is required");
-		if (newStatus == stored.getStatus())
-			return stored;
-		MemberStatus old = stored.getStatus();
-		boolean allowed = old == MemberStatus.ACTIVE
-		        && (newStatus == MemberStatus.SUSPENDED || newStatus == MemberStatus.COMPLETED || newStatus == MemberStatus.WITHDRAWN)
-		        || old == MemberStatus.SUSPENDED
-		        && (newStatus == MemberStatus.ACTIVE || newStatus == MemberStatus.COMPLETED || newStatus == MemberStatus.WITHDRAWN);
-		if (!allowed)
-			throw new APIException(
-			        "Unsupported membership transition; use the enrollment service for proposals and new episodes");
-		Date effective = asOf == null ? new Date() : new Date(asOf.getTime());
-		if (stored.getDateEnrolled() != null && effective.before(stored.getDateEnrolled()))
-			throw new APIException("Transition precedes enrollment");
-		org.openmrs.module.caremodels.config.StorageEnvelope envelope = org.openmrs.module.caremodels.config.StorageEnvelope
-		        .fromJson(new com.fasterxml.jackson.databind.ObjectMapper(), model.getConfiguration());
-		String version = envelope.getPublished() == null ? null : envelope.getPublished().getVersion();
-		String type = newStatus == MemberStatus.ACTIVE ? "RESUMED" : newStatus.name();
-		MembershipHistory.append(stored, version, type, effective, reason, null,
-		    new OpenmrsEnrollmentActorProvider().getCurrentActor(), false);
-		if (newStatus == MemberStatus.COMPLETED || newStatus == MemberStatus.WITHDRAWN)
-			stored.setDateCompleted(effective);
-		stored.setStatus(newStatus);
-		return dao.saveCareModelMember(stored);
+		if (member == null || member.getUuid() == null) {
+			throw new APIException("A persisted Care Model membership is required");
+		}
+		return enrollmentService.transitionEnrollment(member.getUuid(), newStatus, reason, asOf);
 	}
 
 	@Override

@@ -69,6 +69,9 @@
         <property name="sessionFactory" ref="dbSessionFactory" />
     </bean>
 
+    <bean id="caremodels.EnrollmentCommandAuthorizer"
+          class="org.openmrs.module.caremodels.api.impl.OpenmrsEnrollmentCommandAuthorizer" />
+
     <bean id="caremodels.EnrollmentRuleEvidenceFactory"
           class="org.openmrs.module.caremodels.event.OpenmrsEnrollmentRuleEvidenceFactory">
         <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
@@ -96,8 +99,8 @@
         <property name="transactionManager" ref="transactionManager" />
         <property name="target">
             <bean class="org.openmrs.module.caremodels.api.impl.CareModelMemberServiceImpl">
-                <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
                 <property name="dao" ref="caremodels.HibernateCareModelMemberDAO" />
+                <property name="enrollmentService" ref="caremodels.CareModelEnrollmentService" />
             </bean>
         </property>
         <property name="preInterceptors" ref="serviceInterceptors" />
@@ -121,6 +124,7 @@
             <bean class="org.openmrs.module.caremodels.api.impl.CareModelEnrollmentServiceImpl">
                 <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
                 <property name="memberDAO" ref="caremodels.HibernateCareModelMemberDAO" />
+                <property name="commandAuthorizer" ref="caremodels.EnrollmentCommandAuthorizer" />
             </bean>
         </property>
         <property name="preInterceptors" ref="serviceInterceptors" />
