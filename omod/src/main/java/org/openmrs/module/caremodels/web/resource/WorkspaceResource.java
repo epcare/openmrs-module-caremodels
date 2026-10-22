@@ -58,6 +58,12 @@ public class WorkspaceResource extends DelegatingCrudResource<WorkspaceTab> {
 		throw new UnsupportedOperationException("Use ?patient=&model=&tab=");
 	}
 
+	/** RESTWS dispatches requests containing q/patient/model/tab filters through search(). */
+	@Override
+	protected PageableResult doSearch(RequestContext context) throws ResponseException {
+		return doGetAll(context);
+	}
+
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		String patient = trimToNull(context.getParameter("patient"));

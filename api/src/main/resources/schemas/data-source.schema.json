@@ -213,21 +213,7 @@
         }
       },
       "then": {
-        "properties": {
-          "resolverId": {
-            "enum": [
-              "patient-summary",
-              "conditions",
-              "encounter-diagnoses"
-            ]
-          },
-          "resolverVersion": {
-            "const": "1.0.0"
-          },
-          "resultType": {
-            "const": "TABLE"
-          }
-        }
+        "properties": {}
       }
     }
   ]

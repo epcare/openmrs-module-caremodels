@@ -39,7 +39,15 @@ public class DataRequestResource extends DelegatingCrudResource<DataRequestResul
 	private final DataResolverRegistry resolvers;
 
 	public DataRequestResource() {
-		this(new DataResolverRegistry());
+		this(sharedRegistry());
+	}
+
+	private static DataResolverRegistry sharedRegistry() {
+		DataResolverRegistry registry = Context.getRegisteredComponent("caremodels.DataResolverRegistry",
+		    DataResolverRegistry.class);
+		if (registry == null)
+			throw new APIException("Resolver registry is unavailable");
+		return registry;
 	}
 
 	public DataRequestResource(DataResolverRegistry resolvers) {
@@ -84,7 +92,7 @@ public class DataRequestResource extends DelegatingCrudResource<DataRequestResul
 		if (resolver.getReferenceKind() != null && referenceUuid == null)
 			throw new APIException("Resource alias is unavailable");
 
-		JsonNode result = resolver.resolve(patientIdFor(access.getPatientUuid()), source, referenceUuid);
+		JsonNode result = resolvers.resolve(resolverId, patientIdFor(access.getPatientUuid()), source, referenceUuid);
 
 		DataRequestResult response = new DataRequestResult();
 		response.setModelCode(access.getModelCode());

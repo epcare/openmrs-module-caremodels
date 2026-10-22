@@ -73,6 +73,12 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 		return model;
 	}
 
+	/** RESTWS dispatches requests containing q/patient/model/tab filters through search(). */
+	@Override
+	protected PageableResult doSearch(RequestContext context) throws ResponseException {
+		return doGetAll(context);
+	}
+
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		String q = trimToNull(context.getParameter("q"));

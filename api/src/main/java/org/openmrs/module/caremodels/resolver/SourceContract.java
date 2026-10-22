@@ -35,6 +35,14 @@ public final class SourceContract {
             result.addError(path, "Unavailable resolver: " + id);
             return result;
         }
+        if ("registered".equals(source.path("type").asText()) && resolver instanceof VersionedDataResolver) {
+            VersionedDataResolver extension = (VersionedDataResolver) resolver;
+            if (!extension.getVersion().equals(source.path("resolverVersion").asText())) result.addError(path, "Unsupported registered resolver version");
+            result.merge(validateSchema(source, extension.getSourceSchema(), path));
+            try { ResolverSupport.limit(source, 100); ResolverSupport.since(source, java.time.Instant.now(), 365); }
+            catch (IllegalArgumentException e) { result.addError(path, e.getMessage()); }
+            return result;
+        }
         boolean registered = "registered".equals(source.path("type").asText());
         if (registered && !Arrays.asList("patient-summary", "conditions", "encounter-diagnoses").contains(id))
             result.addError(path + ".resolverId", "Use the built-in source type for this resolver");
@@ -67,4 +75,23 @@ public final class SourceContract {
         catch (IllegalArgumentException e) { result.addError(path, e.getMessage()); }
         return result;
     }
+
+	public static ValidationResult validateResult(JsonNode result, DataResolver resolver) {
+		if (resolver instanceof VersionedDataResolver)
+			return validateSchema(result, ((VersionedDataResolver) resolver).getResultSchema(), "$.result");
+		return SCHEMAS.validate(result, org.openmrs.module.caremodels.config.JsonSchemaValidator.SchemaType.CLINICAL_RESULT);
+	}
+
+	private static ValidationResult validateSchema(JsonNode value, JsonNode schema, String path) {
+		ValidationResult result = ValidationResult.valid();
+		if (schema == null || !schema.isObject()) {
+			result.addError(path, "Registered schema is unavailable");
+			return result;
+		}
+		com.networknt.schema.JsonSchema validator = com.networknt.schema.JsonSchemaFactory.getInstance(
+		    com.networknt.schema.SpecVersion.VersionFlag.V202012).getSchema(schema);
+		for (com.networknt.schema.ValidationMessage error : validator.validate(value))
+			result.addError(path + error.getPath(), error.getMessage());
+		return result;
+	}
 }

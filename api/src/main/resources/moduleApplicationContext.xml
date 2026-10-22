@@ -10,6 +10,32 @@
     <!-- Enable annotation processing for @Autowired and other annotations -->
     <context:annotation-config/>
 
+    <bean id="caremodels.DataResolverRegistry" class="org.openmrs.module.caremodels.resolver.DataResolverRegistry">
+        <property name="transactionManager" ref="transactionManager" />
+    </bean>
+
+    <!-- Stateless rule core; event processors provide patient-specific evidence and evaluation time. -->
+    <bean id="caremodels.RuleExpressionEvaluator"
+          class="org.openmrs.module.caremodels.rule.RuleExpressionEvaluator" />
+
+    <bean id="caremodels.EnrollmentRuleEngine"
+          class="org.openmrs.module.caremodels.rule.EnrollmentRuleEngine">
+        <constructor-arg ref="caremodels.RuleExpressionEvaluator" />
+    </bean>
+
+    <!-- AOP service advice publishes here; listeners are added by enrollment processors. -->
+    <bean id="caremodels.ClinicalChangePublisher"
+          class="org.openmrs.module.caremodels.event.ClinicalChangePublisher">
+        <property name="listeners">
+            <list>
+                <ref bean="caremodels.ClinicalChangeEnrollmentProcessor" />
+            </list>
+        </property>
+    </bean>
+
+    <bean id="caremodels.EnrollmentTriggerMatcher"
+          class="org.openmrs.module.caremodels.event.EnrollmentTriggerMatcher" />
+
     <bean id="caremodels.HibernateCareModelDAO"
           class="org.openmrs.module.caremodels.api.db.hibernate.HibernateCareModelDAO">
         <property name="sessionFactory" ref="dbSessionFactory" />
@@ -21,6 +47,7 @@
         <property name="target">
             <bean class="org.openmrs.module.caremodels.api.impl.CareModelServiceImpl">
                 <property name="dao" ref="caremodels.HibernateCareModelDAO" />
+                <property name="resolverRegistry" ref="caremodels.DataResolverRegistry" />
             </bean>
         </property>
         <property name="preInterceptors" ref="serviceInterceptors" />
@@ -42,11 +69,34 @@
         <property name="sessionFactory" ref="dbSessionFactory" />
     </bean>
 
+    <bean id="caremodels.EnrollmentRuleEvidenceFactory"
+          class="org.openmrs.module.caremodels.event.OpenmrsEnrollmentRuleEvidenceFactory">
+        <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
+        <property name="memberDAO" ref="caremodels.HibernateCareModelMemberDAO" />
+    </bean>
+
+    <!-- REQUIRES_NEW is declared on the listener so after-commit delivery owns a fresh transaction. -->
+    <bean id="caremodels.ClinicalChangeEnrollmentProcessor"
+          class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager" />
+        <property name="target">
+            <bean class="org.openmrs.module.caremodels.event.ClinicalChangeEnrollmentProcessor">
+                <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
+                <property name="triggerMatcher" ref="caremodels.EnrollmentTriggerMatcher" />
+                <property name="ruleEngine" ref="caremodels.EnrollmentRuleEngine" />
+                <property name="evidenceFactory" ref="caremodels.EnrollmentRuleEvidenceFactory" />
+                <property name="enrollmentService" ref="caremodels.CareModelEnrollmentService" />
+            </bean>
+        </property>
+        <property name="transactionAttributeSource" ref="transactionAttributeSource" />
+    </bean>
+
     <bean id="caremodels.CareModelMemberService"
           class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="transactionManager" ref="transactionManager" />
         <property name="target">
             <bean class="org.openmrs.module.caremodels.api.impl.CareModelMemberServiceImpl">
+                <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
                 <property name="dao" ref="caremodels.HibernateCareModelMemberDAO" />
             </bean>
         </property>
@@ -60,6 +110,28 @@
             <list>
                 <value>org.openmrs.module.caremodels.api.CareModelMemberService</value>
                 <ref bean="caremodels.CareModelMemberService" />
+            </list>
+        </property>
+    </bean>
+
+    <bean id="caremodels.CareModelEnrollmentService"
+          class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager" />
+        <property name="target">
+            <bean class="org.openmrs.module.caremodels.api.impl.CareModelEnrollmentServiceImpl">
+                <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
+                <property name="memberDAO" ref="caremodels.HibernateCareModelMemberDAO" />
+            </bean>
+        </property>
+        <property name="preInterceptors" ref="serviceInterceptors" />
+        <property name="transactionAttributeSource" ref="transactionAttributeSource" />
+    </bean>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list>
+                <value>org.openmrs.module.caremodels.api.CareModelEnrollmentService</value>
+                <ref bean="caremodels.CareModelEnrollmentService" />
             </list>
         </property>
     </bean>
@@ -87,4 +159,21 @@
         </property>
     </bean>
 
+    <bean id="caremodels.CareModelReconciliationService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager" />
+        <property name="target">
+            <bean class="org.openmrs.module.caremodels.api.impl.CareModelReconciliationServiceImpl">
+                <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
+                <property name="memberDAO" ref="caremodels.HibernateCareModelMemberDAO" />
+                <property name="enrollmentService" ref="caremodels.CareModelEnrollmentService" />
+                <property name="evidenceFactory" ref="caremodels.EnrollmentRuleEvidenceFactory" />
+            </bean>
+        </property>
+        <property name="preInterceptors" ref="serviceInterceptors" />
+        <property name="transactionAttributeSource" ref="transactionAttributeSource" />
+    </bean>
+    <bean parent="serviceContext"><property name="moduleService"><list>
+        <value>org.openmrs.module.caremodels.api.CareModelReconciliationService</value>
+        <ref bean="caremodels.CareModelReconciliationService" />
+    </list></property></bean>
 </beans>

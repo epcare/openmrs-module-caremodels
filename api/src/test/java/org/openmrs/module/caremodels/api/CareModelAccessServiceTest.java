@@ -37,17 +37,17 @@ import org.openmrs.test.BaseModuleContextSensitiveTest;
  * service layer. Every failure mode must fail closed and must not disclose restricted model names.
  */
 public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
-	
+
 	private CareModelService modelService;
-	
+
 	private CareModelMemberService memberService;
-	
+
 	private CareModelAccessService accessService;
-	
+
 	private ObjectMapper mapper;
-	
+
 	private User originalUser;
-	
+
 	@Before
 	public void setup() throws Exception {
 		modelService = Context.getService(CareModelService.class);
@@ -56,7 +56,7 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 		mapper = new ObjectMapper();
 		originalUser = Context.getAuthenticatedUser();
 	}
-	
+
 	@After
 	public void restoreUser() throws Exception {
 		// the base test harness authenticates as admin with junit.password (default "test")
@@ -64,11 +64,11 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 			Context.authenticate("admin", System.getProperty("junit.password", "test"));
 		}
 	}
-	
+
 	// ========================
 	// helpers
 	// ========================
-	
+
 	private String minimalDefinition(String label) {
 		ObjectNode definition = mapper.createObjectNode();
 		definition.put("schemaVersion", "1.0.0");
@@ -98,7 +98,7 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 		lifecycle.put("onSourceCorrection", "FLAG_FOR_REVIEW");
 		return definition.toString();
 	}
-	
+
 	private Privilege privilege(String name) {
 		Privilege privilege = Context.getUserService().getPrivilege(name);
 		if (privilege == null) {
@@ -106,22 +106,22 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 		}
 		return privilege;
 	}
-	
+
 	private String modelPrivilege() {
 		return "Task: caremodels.access.test";
 	}
-	
+
 	private CareModel enrolledPublishedModel(String code, org.openmrs.Patient patient) throws Exception {
 		// ensure the model-view privilege exists before the model is created
 		privilege(modelPrivilege());
-		
+
 		CareModel model = modelService.createCareModel(code, "Access Test " + code, null, modelPrivilege(),
 		    minimalDefinition(code));
 		modelService.publishCareModel(code, "1.0.0", 1);
 		enroll(patient, model);
 		return model;
 	}
-	
+
 	private void enroll(org.openmrs.Patient patient, CareModel model) {
 		CareModelMember member = new CareModelMember();
 		member.setCareModelId(model.getId());
@@ -130,18 +130,18 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 		member.setDateEnrolled(new Date());
 		memberService.saveMember(member);
 	}
-	
+
 	// ========================
 	// tests
 	// ========================
-	
+
 	@Test
 	public void shouldReturnAuthorizedMembershipForPublishedModel() throws Exception {
 		org.openmrs.Patient patient = createTestPatient();
 		enrolledPublishedModel("ACCESS_T1", patient);
-		
+
 		List<CareModelMembershipDTO> memberships = accessService.getAuthorizedMemberships(patient.getUuid());
-		
+
 		Assert.assertEquals(1, memberships.size());
 		CareModelMembershipDTO dto = memberships.get(0);
 		Assert.assertEquals("ACCESS_T1", dto.getModelCode());
@@ -149,13 +149,13 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 		Assert.assertNotNull(dto.getModelUuid());
 		Assert.assertNotNull(dto.getDateEnrolled());
 	}
-	
+
 	@Test
 	public void shouldReturnEmptyBoardForPatientWithoutMemberships() throws Exception {
 		org.openmrs.Patient patient = createTestPatient();
 		Assert.assertTrue(accessService.getAuthorizedMemberships(patient.getUuid()).isEmpty());
 	}
-	
+
 	@Test
 	public void shouldFilterDraftModelFromMembership() throws Exception {
 		org.openmrs.Patient patient = createTestPatient();
@@ -164,16 +164,16 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 		CareModel draft = modelService.createCareModel("ACCESS_D1", "Draft model", null, modelPrivilege(),
 		    minimalDefinition("D1"));
 		enroll(patient, draft);
-		
+
 		Assert.assertTrue("draft models must not appear as tabs", accessService.getAuthorizedMemberships(patient.getUuid())
 		        .isEmpty());
 	}
-	
+
 	@Test
 	public void shouldFilterModelWithoutPrivilegeForRestrictedUser() throws Exception {
 		org.openmrs.Patient patient = createTestPatient();
 		CareModel model = enrolledPublishedModel("ACCESS_P1", patient);
-		
+
 		// a user with the master privilege but NOT the model's required privilege
 		User restricted = createUser("accessrestricted", CareModelsPrivileges.VIEW_CARE_MODELS, "View Patients",
 		    "Get Patients");
@@ -194,12 +194,12 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 			Context.authenticate("admin", System.getProperty("junit.password", "test"));
 		}
 	}
-	
+
 	@Test
 	public void shouldDenyUserWithoutMasterPrivilege() throws Exception {
 		org.openmrs.Patient patient = createTestPatient();
 		enrolledPublishedModel("ACCESS_M1", patient);
-		
+
 		User denied = createUser("accessdenied", "View Patients", "Get Patients");
 		Context.authenticate(denied.getUsername(), "Test1234!");
 		try {
@@ -222,13 +222,13 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 			Context.authenticate("admin", System.getProperty("junit.password", "test"));
 		}
 	}
-	
+
 	@Test
 	public void shouldDenyWorkspaceWithoutActiveMembership() throws Exception {
 		org.openmrs.Patient enrolledPatient = createTestPatient();
 		org.openmrs.Patient otherPatient = createTestPatient();
 		enrolledPublishedModel("ACCESS_W1", enrolledPatient);
-		
+
 		try {
 			accessService.authorizeWorkspace(otherPatient.getUuid(), "ACCESS_W1", "overview");
 			Assert.fail("workspace access without membership must fail closed (AC3)");
@@ -237,19 +237,19 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 			// expected
 		}
 	}
-	
+
 	@Test
 	public void shouldAuthorizeWorkspaceForRequestedTabOnly() throws Exception {
 		org.openmrs.Patient patient = createTestPatient();
 		enrolledPublishedModel("ACCESS_A1", patient);
-		
+
 		CareModelAccessService.AuthorizedAccess access = accessService.authorizeWorkspace(patient.getUuid(), "ACCESS_A1",
 		    "overview");
 		Assert.assertNotNull(access);
 		Assert.assertEquals("ACCESS_A1", access.getModelCode());
 		Assert.assertEquals("overview", access.getTabDefinition().path("id").asText());
 		Assert.assertNotNull(access.getPublishedDefinition());
-		
+
 		try {
 			accessService.authorizeWorkspace(patient.getUuid(), "ACCESS_A1", "bogus-tab");
 			Assert.fail("a tab outside the definition must not resolve");
@@ -258,7 +258,43 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 			// expected
 		}
 	}
-	
+
+	@Test
+	public void shouldDenyWorkspaceForSuspendedMembership() throws Exception {
+		org.openmrs.Patient patient = createTestPatient();
+		CareModel model = enrolledPublishedModel("ACCESS_SUSPENDED", patient);
+		CareModelMember member = memberService.getCurrentMember(patient.getPatientId(), model.getId());
+		member.setStatus(MemberStatus.SUSPENDED);
+		memberService.saveMember(member);
+
+		try {
+			accessService.authorizeWorkspace(patient.getUuid(), model.getCode(), "overview");
+			Assert.fail("suspended memberships must not authorize a workspace");
+		}
+		catch (APIException e) {
+			Assert.assertTrue(e.getMessage().contains("No active membership"));
+		}
+	}
+
+	@Test
+	public void shouldAuthorizeClinicianWithoutModelManagementPrivilege() throws Exception {
+		org.openmrs.Patient patient = createTestPatient();
+		CareModel model = enrolledPublishedModel("ACCESS_CLINICIAN", patient);
+
+		User clinician = createUser("accessclinician", CareModelsPrivileges.VIEW_CARE_MODELS, modelPrivilege(),
+		    "View Patients", "Get Patients");
+		Context.authenticate(clinician.getUsername(), "Test1234!");
+		try {
+			Assert.assertFalse(Context.hasPrivilege(CareModelsPrivileges.MANAGE_CARE_MODELS));
+			CareModelAccessService.AuthorizedAccess access = accessService.authorizeWorkspace(patient.getUuid(),
+			    model.getCode(), "overview");
+			Assert.assertEquals("overview", access.getTabDefinition().path("id").asText());
+		}
+		finally {
+			Context.authenticate("admin", System.getProperty("junit.password", "test"));
+		}
+	}
+
 	@Test
 	public void shouldFailClosedForUnknownPatient() {
 		try {
@@ -269,14 +305,14 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 			// expected
 		}
 	}
-	
+
 	// ========================
 	// fixture helpers
 	// ========================
-	
+
 	private org.openmrs.Patient createTestPatient() {
 		String unique = String.valueOf(Math.abs(System.nanoTime()));
-		
+
 		// a permissive identifier type: the seeded types carry format validators
 		org.openmrs.PatientIdentifierType identifierType = Context.getPatientService().getPatientIdentifierTypeByName(
 		    "CAREMODELS-TEST-ID");
@@ -287,7 +323,7 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 			identifierType.setRequired(false);
 			identifierType = Context.getPatientService().savePatientIdentifierType(identifierType);
 		}
-		
+
 		org.openmrs.Patient patient = new org.openmrs.Patient();
 		patient.setGender("F");
 		patient.setBirthdate(new Date());
@@ -296,7 +332,7 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 		        .getLocation(1)));
 		return Context.getPatientService().savePatient(patient);
 	}
-	
+
 	private User createUser(String username, String... privilegeNames) throws Exception {
 		Role role = new Role();
 		role.setRole("caremodels-" + username + "-" + System.nanoTime());
@@ -305,7 +341,7 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 			role.addPrivilege(privilege(privilegeName));
 		}
 		role = Context.getUserService().saveRole(role);
-		
+
 		User user = new User();
 		user.setUsername(username);
 		user.addRole(role);

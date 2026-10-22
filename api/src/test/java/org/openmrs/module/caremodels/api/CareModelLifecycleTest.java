@@ -241,6 +241,10 @@ public class CareModelLifecycleTest extends BaseModuleContextSensitiveTest {
 		((ObjectNode) envelope.path("published").path("definition").path("terminology")).putObject("concepts").put(
 		    "missing_concept", "00000000-0000-0000-0000-000000000000");
 
+		// Keep integrity valid so this regression actually reaches local-reference validation.
+		((ObjectNode) envelope.path("published")).put("checksum",
+		    CanonicalJson.sha256(envelope.path("published").path("definition")));
+
 		try {
 			service.importModel("LIFECYCLE_I1_IMPORT", "Imported", testPrivilege, envelope.toString());
 			Assert.fail("import with unresolvable reference should be rejected");
@@ -298,6 +302,8 @@ public class CareModelLifecycleTest extends BaseModuleContextSensitiveTest {
 	@Test
 	public void widgetDefinitionShouldSurviveDraftValidationPublishAndAuthorizedRead() throws Exception {
 		ObjectNode definition = (ObjectNode) mapper.readTree(minimalDefinition("Widget lifecycle"));
+		((ObjectNode) definition.path("enrollment")).put("enabled", true);
+		((ObjectNode) definition.path("enrollment").path("manualEnrollment")).put("enabled", true);
 		ObjectNode source = ((ObjectNode) definition.path("dataSources")).putObject("summary");
 		source.put("type", "registered").put("resolverId", "patient-summary").put("resolverVersion", "1.0.0")
 		        .put("resultType", "TABLE");
@@ -312,12 +318,13 @@ public class CareModelLifecycleTest extends BaseModuleContextSensitiveTest {
 		Assert.assertTrue(service.validateDraft(definition.toString()).isValid());
 		service.publishCareModel(model.getCode(), "1.0.0", 2);
 		org.openmrs.Patient patient = Context.getPatientService().getPatient(2);
-		org.openmrs.module.caremodels.model.CareModelMember member = new org.openmrs.module.caremodels.model.CareModelMember();
-		member.setPatientId(patient.getId());
-		member.setCareModelId(model.getId());
-		member.setStatus(org.openmrs.module.caremodels.model.CareModelMember.MemberStatus.ACTIVE);
-		member.setDateEnrolled(new java.util.Date());
-		Context.getService(CareModelMemberService.class).saveMember(member);
+		CareModelEnrollmentService enrollments = Context.getService(CareModelEnrollmentService.class);
+		org.openmrs.module.caremodels.model.CareModelMember member = enrollments.enrollManually(patient.getId(),
+		    model.getId(), "Widget integration test", new java.util.Date());
+		Assert.assertEquals(member.getUuid(),
+		    enrollments.enrollManually(patient.getId(), model.getId(), "Idempotent replay", new java.util.Date()).getUuid());
+		Assert.assertEquals(1, mapper.readTree(member.getMembershipData()).path("history").size());
+
 		CareModelAccessService.AuthorizedAccess authorized = Context.getService(CareModelAccessService.class)
 		        .authorizeWorkspace(patient.getUuid(), model.getCode(), "overview");
 		Assert.assertEquals("Saved edit", authorized.getPublishedDefinition().path("metadata").path("display").path("label")

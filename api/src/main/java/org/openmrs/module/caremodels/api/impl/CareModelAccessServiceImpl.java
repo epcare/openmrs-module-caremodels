@@ -24,8 +24,8 @@ import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.module.caremodels.api.CareModelAccessService;
 import org.openmrs.module.caremodels.api.CareModelMemberService;
-import org.openmrs.module.caremodels.api.CareModelService;
 import org.openmrs.module.caremodels.api.db.CareModelDAO;
+import org.openmrs.module.caremodels.config.StorageEnvelope;
 import org.openmrs.module.caremodels.dto.CareModelMembershipDTO;
 import org.openmrs.module.caremodels.dto.CareModelRef;
 import org.openmrs.module.caremodels.model.CareModel;
@@ -164,16 +164,20 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		}
 
 		// only now is the published definition loaded, and only for this model
-		JsonNode published;
-        try {
-            // Read only the selected published snapshot after authorization. Administrative
-            // getPublishedDefinition/getEnvelope APIs require Manage Care Models and must not
-            // be used as a patient-page bypass or impose admin rights on clinical viewers.
-            published = objectMapper.readTree(model.getConfiguration()).path("published").path("definition");
-        } catch (IOException | IllegalArgumentException e) {
-            throw new APIException("Stored definition is not valid JSON", e);
-        }
-        if (!published.isObject()) throw new APIException("Care Model not found or not authorized");
+		StorageEnvelope envelope;
+		try {
+			envelope = StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
+		}
+		catch (IllegalStateException e) {
+			throw new APIException("Stored Care Model envelope is not valid JSON", e);
+		}
+		if (envelope.getPublished() == null || envelope.getPublished().getDefinition() == null) {
+			throw new APIException("Care Model not found or not authorized");
+		}
+
+		JsonNode published = envelope.getPublished().getDefinition();
+		if (!published.isObject())
+			throw new APIException("Care Model not found or not authorized");
 
 		JsonNode workspaceNode = published.path("workspace");
 		String resolvedTabId = tabId;
@@ -185,8 +189,19 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			}
 		}
 		JsonNode tab = resolvedTabId == null ? null : findTab(published, resolvedTabId);
-		if (tab == null || tab.has("visibilityRule")) {
+		if (tab == null) {
 			throw new APIException("Requested tab is not part of this Care Model");
+		}
+
+		if (tab.has("visibilityRule")) {
+			org.openmrs.module.caremodels.event.EnrollmentRuleEvidenceFactory evidence = Context.getRegisteredComponent(
+			    "caremodels.EnrollmentRuleEvidenceFactory",
+			    org.openmrs.module.caremodels.event.EnrollmentRuleEvidenceFactory.class);
+			java.util.Date asOf = new java.util.Date();
+			if (evidence == null
+			        || new org.openmrs.module.caremodels.rule.RuleExpressionEvaluator().evaluate(tab.path("visibilityRule"),
+			            evidence.create(patient.getId(), published, asOf), asOf) != org.openmrs.module.caremodels.rule.TriState.TRUE)
+				throw new APIException("Requested tab is not authorized");
 		}
 
 		// tab summary (id + label only): lets the frontend render the inner-tab strip without
@@ -199,11 +214,14 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			summary.put("label", authoredTab.path("label").asText());
 		}
 
-		AuthorizedAccess authorized = new AuthorizedAccess(resolvedPatientUuid, model.getCode(), model.getUuid(), member.getUuid(), published, tab, tabs);
-        boolean pathwayRequested = false;
-        for (JsonNode widget : tab.path("widgets")) pathwayRequested |= "care-plan".equals(widget.path("type").asText());
-        if (pathwayRequested) authorized.setMemberPathway(readMemberPathway(member, published));
-        return authorized;
+		AuthorizedAccess authorized = new AuthorizedAccess(resolvedPatientUuid, model.getCode(), model.getUuid(),
+		        member.getUuid(), published, tab, tabs);
+		boolean pathwayRequested = false;
+		for (JsonNode widget : tab.path("widgets"))
+			pathwayRequested |= "care-plan".equals(widget.path("type").asText());
+		if (pathwayRequested)
+			authorized.setMemberPathway(readMemberPathway(member, published));
+		return authorized;
 	}
 
 	private JsonNode readMemberPathway(CareModelMember member, JsonNode published) {

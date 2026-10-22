@@ -25,66 +25,72 @@ import org.springframework.transaction.annotation.Transactional;
  * Default implementation of {@link CareModelMemberService}.
  */
 public class CareModelMemberServiceImpl extends BaseOpenmrsService implements CareModelMemberService {
-	
+
 	private CareModelMemberDAO dao;
-	
+
+	private org.openmrs.module.caremodels.api.db.CareModelDAO careModelDAO;
+
+	public void setCareModelDAO(org.openmrs.module.caremodels.api.db.CareModelDAO dao) {
+		this.careModelDAO = dao;
+	}
+
 	public CareModelMemberDAO getDao() {
 		return dao;
 	}
-	
+
 	public void setDao(CareModelMemberDAO dao) {
 		this.dao = dao;
 	}
-	
+
 	@Override
 	@Transactional(readOnly = true)
 	public CareModelMember getMember(Integer careModelMemberId) throws APIException {
 		return dao.getCareModelMemberById(careModelMemberId);
 	}
-	
+
 	@Override
 	@Transactional(readOnly = true)
 	public CareModelMember getMemberByUuid(String uuid) throws APIException {
 		return dao.getCareModelMemberByUuid(uuid);
 	}
-	
+
 	@Override
 	@Transactional(readOnly = true)
 	public CareModelMember getCurrentMember(Integer patientId, Integer careModelId) throws APIException {
 		return dao.getCurrentMember(patientId, careModelId);
 	}
-	
+
 	@Override
 	@Transactional(readOnly = true)
 	public List<CareModelMember> getMembersByPatientAndModel(Integer patientId, Integer careModelId) throws APIException {
 		return dao.getMembersByPatientAndModel(patientId, careModelId);
 	}
-	
+
 	@Override
 	@Transactional(readOnly = true)
 	public List<CareModelMember> getActiveMembersByPatient(Integer patientId) throws APIException {
 		return dao.getActiveMembersByPatient(patientId);
 	}
-	
+
 	@Override
 	@Transactional(readOnly = true)
 	public List<CareModelMember> getActiveMembersByModel(Integer careModelId) throws APIException {
 		return dao.getActiveMembersByModel(careModelId);
 	}
-	
+
 	@Override
 	@Transactional(readOnly = true)
 	public List<CareModelMember> getMembersByPatientAndStatus(Integer patientId, MemberStatus status, boolean includeVoided,
 	        Integer startIndex, Integer limit) throws APIException {
 		return dao.getMembersByPatientAndStatus(patientId, status, includeVoided, startIndex, limit);
 	}
-	
+
 	@Override
 	@Transactional(readOnly = true)
 	public long getMembersCount(Integer patientId, MemberStatus status, boolean includeVoided) throws APIException {
 		return dao.getMembersCount(patientId, status, includeVoided);
 	}
-	
+
 	@Override
 	@Transactional
 	public CareModelMember saveMember(CareModelMember member) throws APIException {
@@ -96,41 +102,62 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 		}
 		return dao.saveCareModelMember(member);
 	}
-	
+
 	@Override
 	@Transactional
 	public CareModelMember transitionMember(CareModelMember member, MemberStatus newStatus, String reason, Date asOf)
 	        throws APIException {
-		if (reason == null || reason.trim().isEmpty()) {
-			throw new APIException("A reason is required for manual membership transitions");
-		}
-		if (newStatus == null || newStatus == member.getStatus()) {
-			return member;
-		}
-		
-		// Append the transition to the membership history before flipping status so the episode
-		// record stays auditable. Full idempotency and provenance come with the enrollment engine.
-		if (newStatus == MemberStatus.COMPLETED || newStatus == MemberStatus.WITHDRAWN) {
-			member.setDateCompleted(asOf != null ? asOf : new Date());
-		}
-		member.setStatus(newStatus);
-		return dao.saveCareModelMember(member);
+		if (reason == null || reason.trim().isEmpty() || reason.length() > 500)
+			throw new APIException("A reason of at most 500 characters is required");
+		if (member == null || member.getId() == null || member.getCareModelId() == null)
+			throw new APIException("A persisted membership is required");
+		org.openmrs.module.caremodels.model.CareModel model = careModelDAO
+		        .getCareModelByIdForUpdate(member.getCareModelId());
+		CareModelMember stored = dao.getCareModelMemberById(member.getId());
+		if (model == null || stored == null || Boolean.TRUE.equals(stored.getVoided())
+		        || !model.getId().equals(stored.getCareModelId()))
+			throw new APIException("Membership unavailable");
+		if (newStatus == null)
+			throw new APIException("Target status is required");
+		if (newStatus == stored.getStatus())
+			return stored;
+		MemberStatus old = stored.getStatus();
+		boolean allowed = old == MemberStatus.ACTIVE
+		        && (newStatus == MemberStatus.SUSPENDED || newStatus == MemberStatus.COMPLETED || newStatus == MemberStatus.WITHDRAWN)
+		        || old == MemberStatus.SUSPENDED
+		        && (newStatus == MemberStatus.ACTIVE || newStatus == MemberStatus.COMPLETED || newStatus == MemberStatus.WITHDRAWN);
+		if (!allowed)
+			throw new APIException(
+			        "Unsupported membership transition; use the enrollment service for proposals and new episodes");
+		Date effective = asOf == null ? new Date() : new Date(asOf.getTime());
+		if (stored.getDateEnrolled() != null && effective.before(stored.getDateEnrolled()))
+			throw new APIException("Transition precedes enrollment");
+		org.openmrs.module.caremodels.config.StorageEnvelope envelope = org.openmrs.module.caremodels.config.StorageEnvelope
+		        .fromJson(new com.fasterxml.jackson.databind.ObjectMapper(), model.getConfiguration());
+		String version = envelope.getPublished() == null ? null : envelope.getPublished().getVersion();
+		String type = newStatus == MemberStatus.ACTIVE ? "RESUMED" : newStatus.name();
+		MembershipHistory.append(stored, version, type, effective, reason, null,
+		    new OpenmrsEnrollmentActorProvider().getCurrentActor(), false);
+		if (newStatus == MemberStatus.COMPLETED || newStatus == MemberStatus.WITHDRAWN)
+			stored.setDateCompleted(effective);
+		stored.setStatus(newStatus);
+		return dao.saveCareModelMember(stored);
 	}
-	
+
 	@Override
 	@Transactional
 	public CareModelMember voidMember(CareModelMember member, String reason) throws APIException {
 		dao.voidCareModelMember(member, reason);
 		return member;
 	}
-	
+
 	@Override
 	@Transactional
 	public CareModelMember unvoidMember(CareModelMember member) throws APIException {
 		dao.unvoidCareModelMember(member);
 		return member;
 	}
-	
+
 	@Override
 	@Transactional
 	public void purgeMember(CareModelMember member) throws APIException {

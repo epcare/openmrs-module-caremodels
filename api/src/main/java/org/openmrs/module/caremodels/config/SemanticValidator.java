@@ -9,8 +9,10 @@
  */
 package org.openmrs.module.caremodels.config;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -36,8 +38,16 @@ public class SemanticValidator {
 
 	private final OpenmrsReferenceChecker checker;
 
+	private final org.openmrs.module.caremodels.resolver.DataResolverRegistry resolvers;
+
 	public SemanticValidator(OpenmrsReferenceChecker checker) {
+		this(checker, new org.openmrs.module.caremodels.resolver.DataResolverRegistry());
+	}
+
+	public SemanticValidator(OpenmrsReferenceChecker checker,
+	    org.openmrs.module.caremodels.resolver.DataResolverRegistry registry) {
 		this.checker = checker;
+		this.resolvers = registry;
 	}
 
 	public ValidationResult validateDefinition(JsonNode definition) {
@@ -49,12 +59,20 @@ public class SemanticValidator {
 		JsonNode forms = definition.path("forms");
 		JsonNode actions = definition.path("actions");
 		JsonNode workspace = definition.path("workspace");
+		JsonNode enrollment = definition.path("enrollment");
 
 		validateTerminology(terminology, result);
 		validateDataSources(dataSources, terminology, result);
 		validateForms(forms, terminology, result);
-		validateActions(actions, forms, result);
+		validateActions(actions, forms, terminology, result);
 		validateWorkspace(workspace, dataSources, actions, forms, terminology, result);
+		validateEnrollment(enrollment, terminology, result);
+		validatePathways(definition.path("pathways"), result);
+		validateRuleExpressions(definition.path("pathways").path("transitions"), "expression", "$.pathways.transitions",
+		    terminology, result);
+		validateRuleExpressions(definition.path("automation").path("rules"), "expression", "$.automation.rules",
+		    terminology, result);
+		validateUniqueIds(definition.path("automation").path("rules"), "$.automation.rules", "automation rule", result);
 		return result;
 	}
 
@@ -122,13 +140,13 @@ public class SemanticValidator {
 			String path = "$.dataSources." + field.getKey();
 			JsonNode dataSource = field.getValue();
 			String type = dataSource.path("type").asText();
-			result.merge(org.openmrs.module.caremodels.resolver.SourceContract.validate(dataSource,
-			    new org.openmrs.module.caremodels.resolver.DataResolverRegistry(), path));
+			result.merge(org.openmrs.module.caremodels.resolver.SourceContract.validate(dataSource, resolvers, path));
 
-			if (Registry.DATA_SOURCE_TYPES.contains(type) && !Registry.DS_REGISTERED.equals(type)) {
+			if (Registry.DATA_SOURCE_TYPES.contains(type)) {
 				checkAliasExists(dataSource, "conceptAlias", "concepts", terminology, path, result);
 				checkAliasExists(dataSource, "programAlias", "programs", terminology, path, result);
 				checkAliasExists(dataSource, "encounterTypeAlias", "encounterTypes", terminology, path, result);
+				checkAliasExists(dataSource, "formAlias", "forms", terminology, path, result);
 			}
 
 			// Windows and result caps must respect server bounds (schema bounds are the outer limits;
@@ -160,10 +178,12 @@ public class SemanticValidator {
 		if (!forms.isArray()) {
 			return;
 		}
+		Set<String> aliases = new HashSet<String>();
 		for (int i = 0; i < forms.size(); i++) {
 			String path = "$.forms[" + i + "]";
 			JsonNode form = forms.get(i);
 			String alias = form.path("alias").asText();
+			checkUniqueId(alias, path + ".alias", "form alias", aliases, result);
 			if (!terminology.path("forms").has(alias)) {
 				result.addError(path + ".alias", "Form alias '" + alias + "' is not declared in terminology.forms");
 			}
@@ -175,13 +195,15 @@ public class SemanticValidator {
 		}
 	}
 
-	private void validateActions(JsonNode actions, JsonNode forms, ValidationResult result) {
+	private void validateActions(JsonNode actions, JsonNode forms, JsonNode terminology, ValidationResult result) {
 		if (!actions.isArray()) {
 			return;
 		}
+		Set<String> ids = new HashSet<String>();
 		for (int i = 0; i < actions.size(); i++) {
 			String path = "$.actions[" + i + "]";
 			JsonNode action = actions.get(i);
+			checkUniqueId(action.path("id").asText(null), path + ".id", "action", ids, result);
 			String type = action.path("type").asText();
 
 			if (Registry.ACTION_LAUNCH_FORM.equals(type)) {
@@ -196,6 +218,7 @@ public class SemanticValidator {
 			        && action.path("transition").asText("").isEmpty()) {
 				result.addError(path + ".transition", "Enrollment transition action requires a transition target");
 			}
+			validateRuleExpression(action.path("availabilityRule"), path + ".availabilityRule", terminology, result);
 		}
 	}
 
@@ -233,13 +256,40 @@ public class SemanticValidator {
 			}
 		}
 
+		Set<String> tabIds = new HashSet<String>();
 		for (int t = 0; t < tabs.size(); t++) {
 			JsonNode tab = tabs.get(t);
 			String tabPath = "$.workspace.tabs[" + t + "]";
+			checkUniqueId(tab.path("id").asText(null), tabPath + ".id", "tab", tabIds, result);
+			validateRuleExpression(tab.path("visibilityRule"), tabPath + ".visibilityRule", terminology, result);
 			JsonNode widgets = tab.path("widgets");
+			Set<String> widgetIds = new HashSet<String>();
 			for (int w = 0; w < widgets.size(); w++) {
+				checkUniqueId(widgets.get(w).path("id").asText(null), tabPath + ".widgets[" + w + "].id", "widget",
+				    widgetIds, result);
 				validateWidget(widgets.get(w), tabPath + ".widgets[" + w + "]", dataSources, actions, forms, terminology,
 				    result);
+			}
+			validateLayouts(tab.path("layouts"), tabPath + ".layouts", widgetIds, result);
+		}
+	}
+
+	private void validateLayouts(JsonNode layouts, String path, Set<String> widgetIds, ValidationResult result) {
+		for (String size : new String[] { "wide", "narrow" }) {
+			JsonNode layout = layouts.path(size);
+			Set<String> positioned = new HashSet<String>();
+			for (int i = 0; i < layout.size(); i++) {
+				JsonNode item = layout.get(i);
+				String itemPath = path + "." + size + "[" + i + "]";
+				String widgetId = item.path("widgetId").asText(null);
+				if (!widgetIds.contains(widgetId)) {
+					result.addError(itemPath + ".widgetId", "Layout references undeclared widget '" + widgetId + "'");
+				} else if (!positioned.add(widgetId)) {
+					result.addError(itemPath + ".widgetId", "Widget '" + widgetId + "' occurs more than once in the layout");
+				}
+				if (item.path("col").asInt() + item.path("w").asInt() - 1 > 12) {
+					result.addError(itemPath, "Grid position extends beyond the 12-column layout");
+				}
 			}
 		}
 	}
@@ -314,7 +364,8 @@ public class SemanticValidator {
 		String id = org.openmrs.module.caremodels.resolver.SourceContract.resolverId(source);
 		String resultType = source.path("resultType").asText();
 		boolean observation = Registry.DS_LATEST_OBSERVATION.equals(id) || Registry.DS_HISTORICAL_OBSERVATIONS.equals(id);
-		if (Registry.WIDGET_METRIC.equals(type) && !observation)
+		if (Registry.WIDGET_METRIC.equals(type)
+		        && (!observation || "TABLE".equals(resultType) || "TIMESERIES".equals(resultType)))
 			result.addError(path + ".dataSource", "Metric requires observation values");
 		if (Registry.WIDGET_TREND_CHART.equals(type)
 		        && (!observation || !("NUMBER".equals(resultType) || "TIMESERIES".equals(resultType))))
@@ -339,6 +390,82 @@ public class SemanticValidator {
 			}
 		}
 		return false;
+	}
+
+	private void validateEnrollment(JsonNode enrollment, JsonNode terminology, ValidationResult result) {
+		JsonNode triggers = enrollment.path("triggers");
+		for (int i = 0; i < triggers.size(); i++) {
+			JsonNode trigger = triggers.get(i);
+			String path = "$.enrollment.triggers[" + i + "]";
+			checkAliasExists(trigger, "conceptAlias", "concepts", terminology, path, result);
+			checkAliasExists(trigger, "encounterTypeAlias", "encounterTypes", terminology, path, result);
+			checkAliasExists(trigger, "programAlias", "programs", terminology, path, result);
+			String type = trigger.path("type").asText();
+			String kind = type.startsWith("PROGRAM_") ? "programs" : type.startsWith("ENCOUNTER_") ? "encounterTypes" : type
+			        .startsWith("OBSERVATION_") ? "concepts" : null;
+			if (kind != null) {
+				checkAliasExists(trigger, "alias", kind, terminology, path, result);
+			}
+		}
+		validateUniqueIds(enrollment.path("rules"), "$.enrollment.rules", "enrollment rule", result);
+		validateRuleExpressions(enrollment.path("rules"), "expression", "$.enrollment.rules", terminology, result);
+	}
+
+	private void validatePathways(JsonNode pathways, ValidationResult result) {
+		Set<String> stages = validateUniqueIds(pathways.path("stages"), "$.pathways.stages", "pathway stage", result);
+		JsonNode transitions = pathways.path("transitions");
+		for (int i = 0; i < transitions.size(); i++) {
+			for (String endpoint : new String[] { "from", "to" }) {
+				String stage = transitions.get(i).path(endpoint).asText(null);
+				if (!stages.contains(stage)) {
+					result.addError("$.pathways.transitions[" + i + "]." + endpoint,
+					    "Transition references undeclared pathway stage '" + stage + "'");
+				}
+			}
+		}
+	}
+
+	private Set<String> validateUniqueIds(JsonNode items, String path, String kind, ValidationResult result) {
+		Set<String> ids = new HashSet<String>();
+		for (int i = 0; i < items.size(); i++) {
+			checkUniqueId(items.get(i).path("id").asText(null), path + "[" + i + "].id", kind, ids, result);
+		}
+		return ids;
+	}
+
+	private void validateRuleExpressions(JsonNode owners, String field, String path, JsonNode terminology,
+	        ValidationResult result) {
+		for (int i = 0; i < owners.size(); i++) {
+			validateRuleExpression(owners.get(i).path(field), path + "[" + i + "]." + field, terminology, result);
+		}
+	}
+
+	private void validateRuleExpression(JsonNode expression, String path, JsonNode terminology, ValidationResult result) {
+		if (expression == null || expression.isMissingNode()) {
+			return;
+		}
+		for (String operator : new String[] { "all", "any" }) {
+			JsonNode children = expression.path(operator);
+			for (int i = 0; i < children.size(); i++) {
+				validateRuleExpression(children.get(i), path + "." + operator + "[" + i + "]", terminology, result);
+			}
+		}
+		if (expression.has("not")) {
+			validateRuleExpression(expression.path("not"), path + ".not", terminology, result);
+		}
+		String type = expression.path("type").asText(null);
+		String kind = "program".equals(type) ? "programs" : "encounter".equals(type) ? "encounterTypes" : "observation"
+		        .equals(type) ? "concepts" : null;
+		if (kind != null) {
+			checkAliasExists(expression, "alias", kind, terminology, path, result);
+		}
+		checkAliasExists(expression, "codedAnswerAlias", "codedAnswers", terminology, path, result);
+	}
+
+	private void checkUniqueId(String id, String path, String kind, Set<String> seen, ValidationResult result) {
+		if (id != null && !seen.add(id)) {
+			result.addError(path, "Duplicate " + kind + " id '" + id + "'");
+		}
 	}
 
 	// ========================

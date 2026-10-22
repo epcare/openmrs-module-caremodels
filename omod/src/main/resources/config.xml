@@ -43,6 +43,20 @@
 		</description>
 	</globalProperty>
 
+	<!-- Filtered clinical writes are dispatched after their transaction commits. -->
+	<advice>
+		<point>org.openmrs.api.ProgramWorkflowService</point>
+		<class>org.openmrs.module.caremodels.event.ProgramWorkflowServiceAdvice</class>
+	</advice>
+	<advice>
+		<point>org.openmrs.api.EncounterService</point>
+		<class>org.openmrs.module.caremodels.event.EncounterServiceAdvice</class>
+	</advice>
+	<advice>
+		<point>org.openmrs.api.ObsService</point>
+		<class>org.openmrs.module.caremodels.event.ObsServiceAdvice</class>
+	</advice>
+
 	<!-- Servlets -->
 	<!-- Accessed through the url /pageContext()/moduleServlet/<moduleId>/<servlet-name>
 	<servlet>

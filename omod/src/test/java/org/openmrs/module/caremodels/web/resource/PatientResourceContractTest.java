@@ -44,7 +44,7 @@ public class PatientResourceContractTest {
         when(accessService.authorizeWorkspace("patient", "model", "overview")).thenAnswer(call -> authorized());
         resolver = mock(DataResolver.class); when(resolver.getId()).thenReturn("latest-observation");
         when(resolver.getReferenceKind()).thenReturn("concepts"); when(resolver.getReferenceField()).thenReturn("conceptAlias");
-        when(resolver.resolve(eq(7), any(), eq("concept"))).thenReturn(mapper.readTree("{\"type\":\"latest-observation\",\"values\":[]}"));
+        when(resolver.resolve(eq(7), any(), eq("concept"))).thenReturn(mapper.readTree("{\"type\":\"latest-observation\",\"concept\":\"concept\",\"values\":[],\"resolverVersion\":\"1.0.0\",\"assessedAt\":\"2026-10-22T00:00:00Z\",\"provenance\":\"OpenMRS service API\",\"status\":\"no-records\"}"));
         DataResolverRegistry registry = new DataResolverRegistry(); registry.register(resolver);
         resource = new DataRequestResource(registry);
     }

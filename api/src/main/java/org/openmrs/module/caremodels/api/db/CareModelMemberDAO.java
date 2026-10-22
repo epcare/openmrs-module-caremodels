@@ -19,33 +19,42 @@ import org.openmrs.module.caremodels.model.CareModelMember.MemberStatus;
  * is additionally enforced by the generated-column unique index in Liquibase.
  */
 public interface CareModelMemberDAO {
-	
+
 	CareModelMember saveCareModelMember(CareModelMember member);
-	
+
 	CareModelMember getCareModelMemberById(Integer id);
-	
+
 	CareModelMember getCareModelMemberByUuid(String uuid);
-	
+
+	/** Finds a prior rule-driven enrollment for idempotent event replay. */
+	CareModelMember getMemberBySource(Integer patientId, Integer careModelId, String sourceUuid);
+
+	/** Current proposal or enrolled episode, excluding completed/declined/erroneous history. */
+	CareModelMember getOpenMember(Integer patientId, Integer careModelId);
+
+	/** Next episode counter including voided history, which still owns its unique episode number. */
+	int getNextEpisodeNumber(Integer patientId, Integer careModelId);
+
 	/** The current (non-voided, ACTIVE or SUSPENDED) episode for a patient in a model, if any. */
 	CareModelMember getCurrentMember(Integer patientId, Integer careModelId);
-	
+
 	/** All non-voided episodes of a patient in a model, newest episode first. */
 	List<CareModelMember> getMembersByPatientAndModel(Integer patientId, Integer careModelId);
-	
+
 	/** All ACTIVE non-voided episodes of a patient across models; the patient-tab source query. */
 	List<CareModelMember> getActiveMembersByPatient(Integer patientId);
-	
+
 	/** All ACTIVE non-voided episodes in a model; enrollment/backfill support. */
 	List<CareModelMember> getActiveMembersByModel(Integer careModelId);
-	
+
 	List<CareModelMember> getMembersByPatientAndStatus(Integer patientId, MemberStatus status, boolean includeVoided,
 	        Integer startIndex, Integer limit);
-	
+
 	long getMembersCount(Integer patientId, MemberStatus status, boolean includeVoided);
-	
+
 	void voidCareModelMember(CareModelMember member, String reason);
-	
+
 	void unvoidCareModelMember(CareModelMember member);
-	
+
 	void purgeCareModelMember(CareModelMember member);
 }

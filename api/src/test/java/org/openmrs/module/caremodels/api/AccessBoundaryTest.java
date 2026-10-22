@@ -86,4 +86,18 @@ public class AccessBoundaryTest {
         model.setConfiguration(envelope.toString());
         assertNull(access.authorizeWorkspace("patient", "model", "overview").getMemberPathway());
     }
+
+    @Test public void selectedTabVisibilityMustEvaluateOnlyAfterAuthorizationAndNeverEnroll() throws Exception {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        com.fasterxml.jackson.databind.node.ObjectNode envelope = (com.fasterxml.jackson.databind.node.ObjectNode)mapper.readTree(model.getConfiguration());
+        com.fasterxml.jackson.databind.node.ObjectNode tab = (com.fasterxml.jackson.databind.node.ObjectNode)envelope.path("published").path("definition").path("workspace").path("tabs").get(0);
+        tab.set("visibilityRule", mapper.readTree("{\"literal\":\"TRUE\"}")); model.setConfiguration(envelope.toString());
+        org.openmrs.module.caremodels.event.EnrollmentRuleEvidenceFactory factory = mock(org.openmrs.module.caremodels.event.EnrollmentRuleEvidenceFactory.class);
+        when(factory.create(anyInt(), any(), any())).thenReturn((type, alias) -> org.openmrs.module.caremodels.rule.RuleEvidence.unknown());
+        context.when(() -> Context.getRegisteredComponent("caremodels.EnrollmentRuleEvidenceFactory", org.openmrs.module.caremodels.event.EnrollmentRuleEvidenceFactory.class)).thenReturn(factory);
+        assertEquals("overview", access.authorizeWorkspace("patient", "model", "overview").getTabDefinition().path("id").asText());
+        context.verify(() -> Context.getService(CareModelEnrollmentService.class), never());
+        tab.set("visibilityRule", mapper.readTree("{\"type\":\"observation\",\"operator\":\"EXISTS\",\"alias\":\"missing\"}")); model.setConfiguration(envelope.toString()); denied();
+        clearInvocations(factory); privileges.remove("View Care Models"); denied(); verifyNoInteractions(factory);
+    }
 }

@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.hibernate.Criteria;
+import org.hibernate.LockMode;
 import org.openmrs.api.db.hibernate.DbSessionFactory;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Order;
@@ -29,40 +30,52 @@ import org.openmrs.module.caremodels.model.CareModel.CareModelStatus;
  * Hibernate implementation of {@link CareModelDAO}.
  */
 public class HibernateCareModelDAO implements CareModelDAO {
-	
+
 	private DbSessionFactory sessionFactory;
-	
+
 	public DbSessionFactory getSessionFactory() {
 		return sessionFactory;
 	}
-	
+
 	public void setSessionFactory(DbSessionFactory sessionFactory) {
 		this.sessionFactory = sessionFactory;
 	}
-	
+
 	@Override
 	public CareModel saveCareModel(CareModel careModel) throws DAOException {
 		sessionFactory.getCurrentSession().saveOrUpdate(careModel);
 		return careModel;
 	}
-	
+
 	@Override
 	public CareModel getCareModelById(Integer id) {
 		return (CareModel) sessionFactory.getCurrentSession().get(CareModel.class, id);
 	}
-	
+
+	@Override
+	public CareModel getCareModelByIdForUpdate(Integer id) {
+		return (CareModel) sessionFactory.getCurrentSession().createCriteria(CareModel.class).add(Restrictions.idEq(id))
+		        .setLockMode(LockMode.PESSIMISTIC_WRITE).uniqueResult();
+	}
+
 	@Override
 	public CareModel getCareModelByUuid(String uuid) {
 		return (CareModel) sessionFactory.getCurrentSession().createCriteria(CareModel.class)
 		        .add(Restrictions.eq("uuid", uuid)).uniqueResult();
 	}
-	
+
 	@Override
 	public CareModel getCareModelByCode(String code) {
 		return (CareModel) sessionFactory.getCurrentSession().createCriteria(CareModel.class)
 		        .add(Restrictions.eq("code", code)).uniqueResult();
 	}
-	
+
+	@Override
+	public CareModel getCareModelByCodeForUpdate(String code) {
+		return (CareModel) sessionFactory.getCurrentSession().createCriteria(CareModel.class)
+		        .add(Restrictions.eq("code", code)).setLockMode(LockMode.PESSIMISTIC_WRITE).uniqueResult();
+	}
+
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<CareModel> getCareModels(String qStr, CareModelStatus status, boolean includeRetired, Integer startIndex,
@@ -77,14 +90,22 @@ public class HibernateCareModelDAO implements CareModelDAO {
 		criteria.addOrder(Order.asc("name"));
 		return criteria.list();
 	}
-	
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public List<CareModel> getPublishedCareModelsForEnrollment() {
+		return sessionFactory.getCurrentSession().createCriteria(CareModel.class)
+		        .add(Restrictions.eq("status", CareModelStatus.PUBLISHED)).add(Restrictions.eq("retired", false))
+		        .addOrder(Order.asc("careModelId")).list();
+	}
+
 	@Override
 	public long getCareModelsCount(String qStr, CareModelStatus status, boolean includeRetired) {
 		Criteria criteria = buildSearchCriteria(qStr, status, includeRetired);
 		criteria.setProjection(Projections.rowCount());
 		return (Long) criteria.uniqueResult();
 	}
-	
+
 	private Criteria buildSearchCriteria(String qStr, CareModelStatus status, boolean includeRetired) {
 		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(CareModel.class);
 		if (!includeRetired) {
@@ -100,18 +121,18 @@ public class HibernateCareModelDAO implements CareModelDAO {
 		}
 		return criteria;
 	}
-	
+
 	@Override
 	public void purgeCareModel(CareModel careModel) throws DAOException {
 		sessionFactory.getCurrentSession().delete(careModel);
 	}
-	
+
 	@Override
 	public CareModelRef getModelRef(Integer careModelId) {
 		List<CareModelRef> refs = getModelRefs(java.util.Collections.singletonList(careModelId));
 		return refs.isEmpty() ? null : refs.get(0);
 	}
-	
+
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<CareModelRef> getModelRefs(Collection<Integer> careModelIds) {
@@ -140,5 +161,41 @@ public class HibernateCareModelDAO implements CareModelDAO {
 			refs.add(ref);
 		}
 		return refs;
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public List<CareModel> getEnrollmentModelsAfter(int modelId, int limit) {
+		if (limit < 1 || limit > 100)
+			throw new IllegalArgumentException("Invalid model batch limit");
+		return sessionFactory.getCurrentSession().createCriteria(CareModel.class)
+		        .add(Restrictions.gt("careModelId", modelId)).add(Restrictions.eq("status", CareModelStatus.PUBLISHED))
+		        .add(Restrictions.eq("retired", false)).addOrder(Order.asc("careModelId")).setMaxResults(limit).list();
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public List<Integer> getPatientIdsAfter(int patientId, int upperId, int limit) {
+		if (limit < 1 || limit > 100)
+			throw new IllegalArgumentException("Invalid patient batch limit");
+		return sessionFactory.getCurrentSession().createCriteria(org.openmrs.Patient.class)
+		        .add(Restrictions.gt("patientId", patientId)).add(Restrictions.le("patientId", upperId))
+		        .add(Restrictions.eq("voided", false)).setProjection(Projections.property("patientId"))
+		        .addOrder(Order.asc("patientId")).setMaxResults(limit).list();
+	}
+
+	@Override
+	public int getMaximumPatientId() {
+		Integer maximum = (Integer) sessionFactory.getCurrentSession().createCriteria(org.openmrs.Patient.class)
+		        .setProjection(Projections.max("patientId")).uniqueResult();
+		return maximum == null ? 0 : maximum;
+	}
+
+	@Override
+	public org.openmrs.GlobalProperty getReconciliationCursorForUpdate() {
+		return (org.openmrs.GlobalProperty) sessionFactory.getCurrentSession()
+		        .createCriteria(org.openmrs.GlobalProperty.class)
+		        .add(Restrictions.eq("property", "caremodels.reconciliation.cursor"))
+		        .setLockMode(LockMode.PESSIMISTIC_WRITE).uniqueResult();
 	}
 }
