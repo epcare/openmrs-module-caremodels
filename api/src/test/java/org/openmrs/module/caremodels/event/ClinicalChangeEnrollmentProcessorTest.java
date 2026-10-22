@@ -129,6 +129,23 @@ public class ClinicalChangeEnrollmentProcessorTest {
 	}
 
 	@Test
+	public void correctedEvidenceShouldBeFlaggedEvenWhenNoEnrollmentTriggerMatches() throws Exception {
+		dao.models.add(model(3, "unmatched", rules(rule("auto", "AUTO_ENROLL", "TRUE"))));
+		ClinicalChangeEvent event = new ClinicalChangeEvent(ClinicalChangeEvent.TriggerType.OBSERVATION_CHANGED,
+		        "patient-uuid", "replacement-obs", "different-concept", NOW, "original-obs");
+
+		processor.onClinicalChange(event);
+
+		assertEquals(1, enrollment.reviewCalls.size());
+		ReviewCall call = enrollment.reviewCalls.get(0);
+		assertEquals(Integer.valueOf(17), call.patientId);
+		assertEquals("original-obs", call.sourceUuid);
+		assertTrue(call.reason.contains("OBSERVATION_CHANGED"));
+		assertEquals(NOW, call.asOf);
+		assertTrue(enrollment.calls.isEmpty());
+	}
+
+	@Test
 	public void listenerShouldAlwaysRunInNewTransaction() throws Exception {
 		Method method = ClinicalChangeEnrollmentProcessor.class.getMethod("onClinicalChange", ClinicalChangeEvent.class);
 		Transactional annotation = method.getAnnotation(Transactional.class);
@@ -137,6 +154,9 @@ public class ClinicalChangeEnrollmentProcessorTest {
 		Method persistence = CareModelEnrollmentService.class.getMethod("applyRuleEnrollment", Integer.class, Integer.class,
 		    String.class, Action.class, String.class, Date.class);
 		assertEquals(Propagation.REQUIRES_NEW, persistence.getAnnotation(Transactional.class).propagation());
+		Method review = CareModelEnrollmentService.class.getMethod("flagEnrollmentsForReview", Integer.class, String.class,
+		    String.class, Date.class);
+		assertEquals(Propagation.REQUIRES_NEW, review.getAnnotation(Transactional.class).propagation());
 	}
 
 	private CareModel model(int id, String code, String rules) throws Exception {
@@ -190,9 +210,22 @@ public class ClinicalChangeEnrollmentProcessorTest {
 		private Date asOf;
 	}
 
+	private static final class ReviewCall {
+
+		private Integer patientId;
+
+		private String sourceUuid;
+
+		private String reason;
+
+		private Date asOf;
+	}
+
 	private static final class RecordingEnrollmentService implements CareModelEnrollmentService {
 
 		private final List<Call> calls = new ArrayList<Call>();
+
+		private final List<ReviewCall> reviewCalls = new ArrayList<ReviewCall>();
 
 		@Override
 		public void onStartup() {
@@ -214,6 +247,18 @@ public class ClinicalChangeEnrollmentProcessorTest {
 			call.asOf = asOf;
 			calls.add(call);
 			return null;
+		}
+
+		@Override
+		public int flagEnrollmentsForReview(Integer patientId, String sourceUuid, String reason, Date asOf)
+		        throws APIException {
+			ReviewCall call = new ReviewCall();
+			call.patientId = patientId;
+			call.sourceUuid = sourceUuid;
+			call.reason = reason;
+			call.asOf = asOf;
+			reviewCalls.add(call);
+			return 1;
 		}
 
 		@Override

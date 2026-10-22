@@ -151,6 +151,12 @@ public class MembershipOperationResourceTest {
 		}
 
 		@Override
+		public int flagEnrollmentsForReview(Integer patientId, String sourceUuid, String reason, Date asOf)
+		        throws APIException {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public CareModelMember enrollManually(Integer patientId, Integer careModelId, String reason, Date asOf)
 		        throws APIException {
 			throw new UnsupportedOperationException();

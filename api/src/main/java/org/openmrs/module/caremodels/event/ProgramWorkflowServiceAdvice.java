@@ -23,12 +23,15 @@ public class ProgramWorkflowServiceAdvice extends ClinicalChangeAdviceSupport im
 	public Object invoke(MethodInvocation invocation) throws Throwable {
 		String method = invocation.getMethod().getName();
 		PatientProgram argument = firstArgument(invocation);
+		boolean newPatientProgram = argument != null && argument.getId() == null;
 		Object result = invocation.proceed();
 		PatientProgram patientProgram = result instanceof PatientProgram ? (PatientProgram) result : argument;
 		if (isProgramWrite(method) && patientProgram != null && patientProgram.getPatient() != null
 		        && patientProgram.getProgram() != null) {
+			String reviewSourceUuid = newPatientProgram && "savePatientProgram".equals(method) ? null : patientProgram
+			        .getUuid();
 			publish(ClinicalChangeEvent.TriggerType.PROGRAM_CHANGED, patientProgram.getPatient().getUuid(),
-			    patientProgram.getUuid(), patientProgram.getProgram().getUuid());
+			    patientProgram.getUuid(), patientProgram.getProgram().getUuid(), reviewSourceUuid);
 		}
 		return result;
 	}

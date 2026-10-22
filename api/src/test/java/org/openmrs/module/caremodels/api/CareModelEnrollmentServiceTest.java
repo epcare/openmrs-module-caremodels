@@ -162,6 +162,22 @@ public class CareModelEnrollmentServiceTest {
 	}
 
 	@Test
+	public void shouldFlagCorrectedEvidenceForReviewIdempotentlyWithoutChangingStatus() throws Exception {
+		CareModelMember member = service.applyRuleEnrollment(7, 3, "auto-rule", Action.AUTO_ENROLL, "event-review", NOW);
+		Date correctedAt = new Date(NOW.getTime() + 1000);
+
+		assertEquals(1, service.flagEnrollmentsForReview(7, "event-review", "Source observation was corrected", correctedAt));
+		assertEquals(0, service.flagEnrollmentsForReview(7, "event-review", "Source observation was corrected", correctedAt));
+
+		assertEquals(MemberStatus.ACTIVE, member.getStatus());
+		JsonNode history = mapper.readTree(member.getMembershipData()).path("history");
+		assertEquals(2, history.size());
+		assertEquals("FLAGGED_FOR_REVIEW", history.get(1).path("type").asText());
+		assertEquals("event-review", history.get(1).path("sourceUuid").asText());
+		assertEquals("actor-uuid", history.get(1).path("actor").asText());
+	}
+
+	@Test
 	public void shouldSuspendAndResumeWithAuditedHistory() throws Exception {
 		CareModelMember member = service.enrollManually(8, 3, "Initial decision", NOW);
 		Date suspendedAt = new Date(NOW.getTime() + 1000);
@@ -385,6 +401,18 @@ public class CareModelEnrollmentServiceTest {
 				}
 			}
 			return null;
+		}
+
+		@Override
+		public List<CareModelMember> getMembersBySourceForUpdate(Integer patientId, String sourceUuid) {
+			List<CareModelMember> result = new ArrayList<CareModelMember>();
+			for (CareModelMember member : members) {
+				if (patientId.equals(member.getPatientId()) && sourceUuid.equals(member.getSourceUuid())
+				        && !Boolean.TRUE.equals(member.getVoided())) {
+					result.add(member);
+				}
+			}
+			return result;
 		}
 
 		@Override

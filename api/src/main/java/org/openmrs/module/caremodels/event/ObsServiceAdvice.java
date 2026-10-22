@@ -32,9 +32,16 @@ public class ObsServiceAdvice extends ClinicalChangeAdviceSupport implements Met
 		ClinicalChangeEvent.TriggerType type = triggerType(method, newObservation);
 		Patient patient = patient(obs);
 		if (type != null && obs != null && patient != null && obs.getConcept() != null) {
-			publish(type, patient.getUuid(), obs.getUuid(), obs.getConcept().getUuid());
+			publish(type, patient.getUuid(), obs.getUuid(), obs.getConcept().getUuid(), reviewSourceUuid(type, obs));
 		}
 		return result;
+	}
+
+	private String reviewSourceUuid(ClinicalChangeEvent.TriggerType type, Obs obs) {
+		if (type == ClinicalChangeEvent.TriggerType.OBSERVATION_SAVED) {
+			return null;
+		}
+		return obs.getPreviousVersion() != null ? obs.getPreviousVersion().getUuid() : obs.getUuid();
 	}
 
 	private Obs firstArgument(MethodInvocation invocation) {

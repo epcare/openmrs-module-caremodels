@@ -69,6 +69,14 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
+	public List<CareModelMember> getMembersBySourceForUpdate(Integer patientId, String sourceUuid) {
+		return sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
+		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("sourceUuid", sourceUuid))
+		        .add(Restrictions.eq("voided", false)).setLockMode(LockMode.PESSIMISTIC_WRITE).list();
+	}
+
+	@Override
 	public CareModelMember getOpenMember(Integer patientId, Integer careModelId) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
 		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("careModelId", careModelId))

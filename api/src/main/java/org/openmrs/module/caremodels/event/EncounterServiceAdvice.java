@@ -28,7 +28,9 @@ public class EncounterServiceAdvice extends ClinicalChangeAdviceSupport implemen
 		Encounter encounter = result instanceof Encounter ? (Encounter) result : argument;
 		ClinicalChangeEvent.TriggerType type = triggerType(method, newEncounter);
 		if (type != null && encounter != null && encounter.getPatient() != null && encounter.getEncounterType() != null) {
-			publish(type, encounter.getPatient().getUuid(), encounter.getUuid(), encounter.getEncounterType().getUuid());
+			String reviewSourceUuid = type == ClinicalChangeEvent.TriggerType.ENCOUNTER_SAVED ? null : encounter.getUuid();
+			publish(type, encounter.getPatient().getUuid(), encounter.getUuid(), encounter.getEncounterType().getUuid(),
+			    reviewSourceUuid);
 		}
 		return result;
 	}
