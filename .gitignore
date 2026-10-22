@@ -70,3 +70,8 @@ omod/.project
 # Project memory and rough work
 MEMORY.md
 roughwork/
+*.png
+
+DECISIONS.md
+IMPLEMENTATION_PLAN.md
+REST_API.md
