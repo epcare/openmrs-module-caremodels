@@ -14,29 +14,29 @@ import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
 public class ClinicalResolversTest {
-
+	
 	private final ObjectMapper mapper = new ObjectMapper();
-
+	
 	private final Instant now = Instant.parse("2026-10-21T12:00:00Z");
-
+	
 	private MockedStatic<Context> context;
-
+	
 	private Patient patient;
-
+	
 	private Concept concept;
-
+	
 	private ObsService obsService;
-
+	
 	private EncounterService encounters;
-
+	
 	private ProgramWorkflowService programs;
-
+	
 	private OrderService orders;
-
+	
 	private ConditionService conditions;
-
+	
 	private DiagnosisService diagnoses;
-
+	
 	@Before public void setup() {
         context = mockStatic(Context.class);
         patient = new Patient(7); patient.setUuid("patient-7");
@@ -54,23 +54,23 @@ public class ClinicalResolversTest {
         conditions = mock(ConditionService.class); context.when(Context::getConditionService).thenReturn(conditions);
         diagnoses = mock(DiagnosisService.class); context.when(Context::getDiagnosisService).thenReturn(diagnoses);
     }
-
+	
 	@After
 	public void cleanup() {
 		context.close();
 	}
-
+	
 	private JsonNode checked(JsonNode result) {
 		org.openmrs.module.caremodels.config.ValidationResult validation = new org.openmrs.module.caremodels.config.JsonSchemaValidator()
 		        .validate(result, org.openmrs.module.caremodels.config.JsonSchemaValidator.SchemaType.CLINICAL_RESULT);
 		assertTrue(validation.toString(), validation.isValid());
 		return result;
 	}
-
+	
 	private JsonNode source(String json) throws Exception {
 		return mapper.readTree(json);
 	}
-
+	
 	private Obs observation(String uuid, String date, Double numeric, String text, String modifier) {
 		Obs obs = new Obs();
 		obs.setUuid(uuid);
@@ -82,13 +82,13 @@ public class ClinicalResolversTest {
 		obs.setValueModifier(modifier);
 		return obs;
 	}
-
+	
 	private void observations(List<Obs> values) {
 		when(
 		    obsService.getObservations(anyList(), isNull(), anyList(), isNull(), isNull(), isNull(), anyList(), anyInt(),
 		        isNull(), any(), any(), eq(false))).thenReturn(values);
 	}
-
+	
 	@Test
 	public void observationContractShouldPreserveQualifiersDatesAndDeterministicTies() throws Exception {
 		Obs numeric = observation("b", "2026-10-20T10:00:00Z", 12.0, null, null);
@@ -108,7 +108,7 @@ public class ClinicalResolversTest {
 		    eq(Arrays.asList("obsDatetime desc", "uuid asc")), eq(3), isNull(),
 		    eq(Date.from(now.minusSeconds(30 * 86400L))), eq(Date.from(now)), eq(false));
 	}
-
+	
 	@Test
 	public void observationsShouldExcludeForeignPatientFutureAndOldValuesAndReportTruncation() throws Exception {
 		Obs foreign = observation("foreign", "2026-10-20T10:00:00Z", 1.0, null, null);
@@ -123,7 +123,7 @@ public class ClinicalResolversTest {
 		assertTrue(result.path("truncated").asBoolean());
 		assertTrue(result.path("total").isNull());
 	}
-
+	
 	@Test
 	public void shouldKeepCodedTextAndDateResultsCompatible() throws Exception {
 		Obs coded = observation("coded", "2026-10-20T10:00:00Z", null, null, null);
@@ -138,7 +138,7 @@ public class ClinicalResolversTest {
 		assertEquals(now.toString(), resolver.resolve(7, source("{}"), "concept-8").path("values").get(0).path("value")
 		        .asText());
 	}
-
+	
 	@Test
 	public void actualEncountersShouldBeBoundedAndTyped() throws Exception {
 		EncounterType type = new EncounterType(4);
@@ -163,7 +163,7 @@ public class ClinicalResolversTest {
 		assertEquals("recorded", result.path("records").get(0).path("status").asText());
 		verifyNoInteractions(obsService);
 	}
-
+	
 	@Test
 	public void programEpisodesShouldNotCollapseToLatestEnrollment() throws Exception {
 		Program program = new Program(3);
@@ -195,7 +195,7 @@ public class ClinicalResolversTest {
 		assertEquals(1, records.get(0).path("currentStates").size());
 		assertEquals("configured-state", records.get(0).path("currentStates").get(0).path("stateUuid").asText());
 	}
-
+	
 	@Test
 	public void patientFieldsMustBeExplicitAndMinimal() throws Exception {
 		patient.setGender("F");
@@ -210,7 +210,7 @@ public class ClinicalResolversTest {
 		catch (IllegalArgumentException expected) {}
 		verifyNoInteractions(obsService, encounters, programs);
 	}
-
+	
 	@Test
 	public void orderHistoryShouldPreserveReplacementAndStoppedDates() throws Exception {
 		DrugOrder first = mock(DrugOrder.class);
@@ -236,7 +236,7 @@ public class ClinicalResolversTest {
 		assertEquals("first", rows.get(1).path("previousOrderUuid").asText());
 		assertTrue(rows.get(1).path("activeAtAssessment").asBoolean());
 	}
-
+	
 	@Test
 	public void conditionsAndDiagnosesMustRemainDistinct() throws Exception {
 		Condition condition = new Condition();
@@ -265,7 +265,7 @@ public class ClinicalResolversTest {
 		when(diagnoses.getDiagnoses(eq(patient), any())).thenReturn(Collections.emptyList());
 		assertEquals("no-records", checked(new DiagnosisResolver().resolve(7, source("{}"), null)).path("status").asText());
 	}
-
+	
 	@Test
 	public void boundsAndUnavailableReferencesMustFailClosed() throws Exception {
 		for (String declaration : Arrays.asList("{\"maxResults\":0}", "{\"maxResults\":1001}", "{\"includeVoided\":true}",

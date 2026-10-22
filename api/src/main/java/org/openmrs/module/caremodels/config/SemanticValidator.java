@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * it.
  */
 public class SemanticValidator {
-
+	
 	/**
 	 * Keys that must never appear anywhere in a definition. Privileges live in
 	 * care_model.privilege; facility activation is out of scope by design; scripts/sql/css are
@@ -35,32 +35,32 @@ public class SemanticValidator {
 	 */
 	static final String[] BANNED_KEYS = { "privilege", "privileges", "facility", "facilities", "overrides", "override",
 	        "script", "javascript", "css", "sql", "query", "expression_url", "import_url" };
-
+	
 	private final OpenmrsReferenceChecker checker;
-
+	
 	private final org.openmrs.module.caremodels.resolver.DataResolverRegistry resolvers;
-
+	
 	public SemanticValidator(OpenmrsReferenceChecker checker) {
 		this(checker, new org.openmrs.module.caremodels.resolver.DataResolverRegistry());
 	}
-
+	
 	public SemanticValidator(OpenmrsReferenceChecker checker,
 	    org.openmrs.module.caremodels.resolver.DataResolverRegistry registry) {
 		this.checker = checker;
 		this.resolvers = registry;
 	}
-
+	
 	public ValidationResult validateDefinition(JsonNode definition) {
 		ValidationResult result = ValidationResult.valid();
 		scanForBannedKeysAndUrls(definition, "$", result);
-
+		
 		JsonNode terminology = definition.path("terminology");
 		JsonNode dataSources = definition.path("dataSources");
 		JsonNode forms = definition.path("forms");
 		JsonNode actions = definition.path("actions");
 		JsonNode workspace = definition.path("workspace");
 		JsonNode enrollment = definition.path("enrollment");
-
+		
 		validateTerminology(terminology, result);
 		validateDataSources(dataSources, terminology, result);
 		validateForms(forms, terminology, result);
@@ -75,11 +75,11 @@ public class SemanticValidator {
 		validateUniqueIds(definition.path("automation").path("rules"), "$.automation.rules", "automation rule", result);
 		return result;
 	}
-
+	
 	// ========================
 	// Terminology
 	// ========================
-
+	
 	private void validateTerminology(JsonNode terminology, ValidationResult result) {
 		for (String kind : new String[] { "concepts", "programs", "encounterTypes", "forms", "codedAnswers" }) {
 			JsonNode aliases = terminology.path(kind);
@@ -112,7 +112,7 @@ public class SemanticValidator {
 			}
 		}
 	}
-
+	
 	private String singular(String kind) {
 		switch (kind) {
 			case "concepts":
@@ -128,11 +128,11 @@ public class SemanticValidator {
 				return kind;
 		}
 	}
-
+	
 	// ========================
 	// Data sources
 	// ========================
-
+	
 	private void validateDataSources(JsonNode dataSources, JsonNode terminology, ValidationResult result) {
 		Iterator<Map.Entry<String, JsonNode>> fields = dataSources.fields();
 		while (fields.hasNext()) {
@@ -141,14 +141,14 @@ public class SemanticValidator {
 			JsonNode dataSource = field.getValue();
 			String type = dataSource.path("type").asText();
 			result.merge(org.openmrs.module.caremodels.resolver.SourceContract.validate(dataSource, resolvers, path));
-
+			
 			if (Registry.DATA_SOURCE_TYPES.contains(type)) {
 				checkAliasExists(dataSource, "conceptAlias", "concepts", terminology, path, result);
 				checkAliasExists(dataSource, "programAlias", "programs", terminology, path, result);
 				checkAliasExists(dataSource, "encounterTypeAlias", "encounterTypes", terminology, path, result);
 				checkAliasExists(dataSource, "formAlias", "forms", terminology, path, result);
 			}
-
+			
 			// Windows and result caps must respect server bounds (schema bounds are the outer limits;
 			// tighter server-side caps may apply per resolver).
 			int windowDays = dataSource.path("windowDays").asInt(0);
@@ -157,7 +157,7 @@ public class SemanticValidator {
 			}
 		}
 	}
-
+	
 	private void checkAliasExists(JsonNode node, String aliasField, String kind, JsonNode terminology, String path,
 	        ValidationResult result) {
 		JsonNode alias = node.path(aliasField);
@@ -169,11 +169,11 @@ public class SemanticValidator {
 			result.addError(path + "." + aliasField, "Alias '" + name + "' is not declared in terminology." + kind);
 		}
 	}
-
+	
 	// ========================
 	// Forms and actions
 	// ========================
-
+	
 	private void validateForms(JsonNode forms, JsonNode terminology, ValidationResult result) {
 		if (!forms.isArray()) {
 			return;
@@ -191,10 +191,10 @@ public class SemanticValidator {
 			if (!form.path("formUuid").asText().equals(terminology.path("forms").path(alias).asText())) {
 				result.addError(path + ".formUuid", "Form UUID must match terminology.forms alias");
 			}
-
+			
 		}
 	}
-
+	
 	private void validateActions(JsonNode actions, JsonNode forms, JsonNode terminology, ValidationResult result) {
 		if (!actions.isArray()) {
 			return;
@@ -205,7 +205,7 @@ public class SemanticValidator {
 			JsonNode action = actions.get(i);
 			checkUniqueId(action.path("id").asText(null), path + ".id", "action", ids, result);
 			String type = action.path("type").asText();
-
+			
 			if (Registry.ACTION_LAUNCH_FORM.equals(type)) {
 				String formAlias = action.path("formAlias").asText(null);
 				if (formAlias != null && !hasFormAlias(forms, formAlias)) {
@@ -213,7 +213,7 @@ public class SemanticValidator {
 					        + "' which is not declared in forms");
 				}
 			}
-
+			
 			if (Registry.ACTION_ENROLLMENT_TRANSITION.equals(type) && action.path("requiresReason").asBoolean(false)
 			        && action.path("transition").asText("").isEmpty()) {
 				result.addError(path + ".transition", "Enrollment transition action requires a transition target");
@@ -221,7 +221,7 @@ public class SemanticValidator {
 			validateRuleExpression(action.path("availabilityRule"), path + ".availabilityRule", terminology, result);
 		}
 	}
-
+	
 	private boolean hasFormAlias(JsonNode forms, String alias) {
 		for (int i = 0; i < forms.size(); i++) {
 			if (alias.equals(forms.get(i).path("alias").asText(null))) {
@@ -230,11 +230,11 @@ public class SemanticValidator {
 		}
 		return false;
 	}
-
+	
 	// ========================
 	// Workspace
 	// ========================
-
+	
 	private void validateWorkspace(JsonNode workspace, JsonNode dataSources, JsonNode actions, JsonNode forms,
 	        JsonNode terminology, ValidationResult result) {
 		JsonNode tabs = workspace.path("tabs");
@@ -255,7 +255,7 @@ public class SemanticValidator {
 				        + "' does not match any declared tab id");
 			}
 		}
-
+		
 		Set<String> tabIds = new HashSet<String>();
 		for (int t = 0; t < tabs.size(); t++) {
 			JsonNode tab = tabs.get(t);
@@ -273,7 +273,7 @@ public class SemanticValidator {
 			validateLayouts(tab.path("layouts"), tabPath + ".layouts", widgetIds, result);
 		}
 	}
-
+	
 	private void validateLayouts(JsonNode layouts, String path, Set<String> widgetIds, ValidationResult result) {
 		for (String size : new String[] { "wide", "narrow" }) {
 			JsonNode layout = layouts.path(size);
@@ -293,7 +293,7 @@ public class SemanticValidator {
 			}
 		}
 	}
-
+	
 	private void validateWidget(JsonNode widget, String path, JsonNode dataSources, JsonNode actions, JsonNode forms,
 	        JsonNode terminology, ValidationResult result) {
 		String type = widget.path("type").asText();
@@ -359,7 +359,7 @@ public class SemanticValidator {
 			        + "' is not declared in terminology.forms");
 		}
 	}
-
+	
 	private void validateBinding(String type, JsonNode source, String path, ValidationResult result) {
 		String id = org.openmrs.module.caremodels.resolver.SourceContract.resolverId(source);
 		String resultType = source.path("resultType").asText();
@@ -382,7 +382,7 @@ public class SemanticValidator {
 		if (required != null)
 			result.addError(path + ".dataSource", "Required resolver: " + required);
 	}
-
+	
 	private boolean hasActionId(JsonNode actions, String actionId) {
 		for (int i = 0; i < actions.size(); i++) {
 			if (actionId.equals(actions.get(i).path("id").asText(null))) {
@@ -391,7 +391,7 @@ public class SemanticValidator {
 		}
 		return false;
 	}
-
+	
 	private void validateEnrollment(JsonNode enrollment, JsonNode terminology, ValidationResult result) {
 		JsonNode triggers = enrollment.path("triggers");
 		for (int i = 0; i < triggers.size(); i++) {
@@ -410,7 +410,7 @@ public class SemanticValidator {
 		validateUniqueIds(enrollment.path("rules"), "$.enrollment.rules", "enrollment rule", result);
 		validateRuleExpressions(enrollment.path("rules"), "expression", "$.enrollment.rules", terminology, result);
 	}
-
+	
 	private void validatePathways(JsonNode pathways, ValidationResult result) {
 		Set<String> stages = validateUniqueIds(pathways.path("stages"), "$.pathways.stages", "pathway stage", result);
 		JsonNode transitions = pathways.path("transitions");
@@ -424,7 +424,7 @@ public class SemanticValidator {
 			}
 		}
 	}
-
+	
 	private Set<String> validateUniqueIds(JsonNode items, String path, String kind, ValidationResult result) {
 		Set<String> ids = new HashSet<String>();
 		for (int i = 0; i < items.size(); i++) {
@@ -432,14 +432,14 @@ public class SemanticValidator {
 		}
 		return ids;
 	}
-
+	
 	private void validateRuleExpressions(JsonNode owners, String field, String path, JsonNode terminology,
 	        ValidationResult result) {
 		for (int i = 0; i < owners.size(); i++) {
 			validateRuleExpression(owners.get(i).path(field), path + "[" + i + "]." + field, terminology, result);
 		}
 	}
-
+	
 	private void validateRuleExpression(JsonNode expression, String path, JsonNode terminology, ValidationResult result) {
 		if (expression == null || expression.isMissingNode()) {
 			return;
@@ -461,17 +461,17 @@ public class SemanticValidator {
 		}
 		checkAliasExists(expression, "codedAnswerAlias", "codedAnswers", terminology, path, result);
 	}
-
+	
 	private void checkUniqueId(String id, String path, String kind, Set<String> seen, ValidationResult result) {
 		if (id != null && !seen.add(id)) {
 			result.addError(path, "Duplicate " + kind + " id '" + id + "'");
 		}
 	}
-
+	
 	// ========================
 	// Banned content
 	// ========================
-
+	
 	/**
 	 * Depth-first scan for banned keys and arbitrary URL values anywhere in the document. Belt and
 	 * braces over the schema's additionalProperties:false: a policy guarantee must not depend on a

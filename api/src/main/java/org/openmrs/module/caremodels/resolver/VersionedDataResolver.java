@@ -13,10 +13,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 /** Trusted Spring code extensions must supply both exact source and result schemas. */
 public interface VersionedDataResolver extends DataResolver {
-
+	
 	String getVersion();
-
+	
 	JsonNode getSourceSchema();
-
+	
 	JsonNode getResultSchema();
 }

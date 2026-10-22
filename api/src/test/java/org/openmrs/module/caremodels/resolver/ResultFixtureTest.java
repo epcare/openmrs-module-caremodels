@@ -6,7 +6,7 @@ import org.openmrs.module.caremodels.config.*;
 import static org.junit.Assert.*;
 
 public class ResultFixtureTest {
-
+	
 	@Test
 	public void handoffFixturesMustValidateAgainstVersionedResultSchemas() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();
@@ -24,7 +24,7 @@ public class ResultFixtureTest {
 			}
 		}
 	}
-
+	
 	@Test
 	public void qualifiedNumericStringMustNeverValidateAsAnExactNumber() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();

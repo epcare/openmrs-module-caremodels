@@ -26,40 +26,40 @@ import org.openmrs.module.caremodels.model.CareModelMember.MemberStatus;
  * Hibernate implementation of {@link CareModelMemberDAO}.
  */
 public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
-
+	
 	private DbSessionFactory sessionFactory;
-
+	
 	public DbSessionFactory getSessionFactory() {
 		return sessionFactory;
 	}
-
+	
 	public void setSessionFactory(DbSessionFactory sessionFactory) {
 		this.sessionFactory = sessionFactory;
 	}
-
+	
 	@Override
 	public CareModelMember saveCareModelMember(CareModelMember member) throws DAOException {
 		sessionFactory.getCurrentSession().saveOrUpdate(member);
 		return member;
 	}
-
+	
 	@Override
 	public CareModelMember getCareModelMemberById(Integer id) {
 		return (CareModelMember) sessionFactory.getCurrentSession().get(CareModelMember.class, id);
 	}
-
+	
 	@Override
 	public CareModelMember getCareModelMemberByUuid(String uuid) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
 		        .add(Restrictions.eq("uuid", uuid)).uniqueResult();
 	}
-
+	
 	@Override
 	public CareModelMember getCareModelMemberByUuidForUpdate(String uuid) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
 		        .add(Restrictions.eq("uuid", uuid)).setLockMode(LockMode.PESSIMISTIC_WRITE).uniqueResult();
 	}
-
+	
 	@Override
 	public CareModelMember getMemberBySource(Integer patientId, Integer careModelId, String sourceUuid) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
@@ -67,7 +67,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .add(Restrictions.eq("sourceUuid", sourceUuid)).addOrder(Order.desc("episodeNumber")).setMaxResults(1)
 		        .uniqueResult();
 	}
-
+	
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<CareModelMember> getMembersBySourceForUpdate(Integer patientId, String sourceUuid) {
@@ -75,7 +75,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("sourceUuid", sourceUuid))
 		        .add(Restrictions.eq("voided", false)).setLockMode(LockMode.PESSIMISTIC_WRITE).list();
 	}
-
+	
 	@Override
 	public CareModelMember getOpenMember(Integer patientId, Integer careModelId) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
@@ -84,7 +84,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .add(Restrictions.in("status", MemberStatus.PENDING, MemberStatus.ACTIVE, MemberStatus.SUSPENDED))
 		        .addOrder(Order.desc("episodeNumber")).setMaxResults(1).uniqueResult();
 	}
-
+	
 	@Override
 	public int getNextEpisodeNumber(Integer patientId, Integer careModelId) {
 		Integer maximum = (Integer) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
@@ -92,7 +92,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .setProjection(Projections.max("episodeNumber")).uniqueResult();
 		return maximum == null ? 1 : maximum + 1;
 	}
-
+	
 	@Override
 	public CareModelMember getCurrentMember(Integer patientId, Integer careModelId) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
@@ -101,7 +101,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .add(Restrictions.in("status", MemberStatus.ACTIVE, MemberStatus.SUSPENDED))
 		        .addOrder(Order.desc("episodeNumber")).setMaxResults(1).uniqueResult();
 	}
-
+	
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<CareModelMember> getMembersByPatientAndModel(Integer patientId, Integer careModelId) {
@@ -109,7 +109,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("careModelId", careModelId))
 		        .add(Restrictions.eq("voided", false)).addOrder(Order.desc("episodeNumber")).list();
 	}
-
+	
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<CareModelMember> getActiveMembersByPatient(Integer patientId) {
@@ -117,7 +117,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("status", MemberStatus.ACTIVE))
 		        .add(Restrictions.eq("voided", false)).addOrder(Order.asc("careModelId")).list();
 	}
-
+	
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<CareModelMember> getActiveMembersByModel(Integer careModelId) {
@@ -125,7 +125,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .add(Restrictions.eq("careModelId", careModelId)).add(Restrictions.eq("status", MemberStatus.ACTIVE))
 		        .add(Restrictions.eq("voided", false)).list();
 	}
-
+	
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<CareModelMember> getMembersByPatientAndStatus(Integer patientId, MemberStatus status, boolean includeVoided,
@@ -140,14 +140,14 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		criteria.addOrder(Order.desc("episodeNumber"));
 		return criteria.list();
 	}
-
+	
 	@Override
 	public long getMembersCount(Integer patientId, MemberStatus status, boolean includeVoided) {
 		Criteria criteria = buildPatientStatusCriteria(patientId, status, includeVoided);
 		criteria.setProjection(Projections.rowCount());
 		return (Long) criteria.uniqueResult();
 	}
-
+	
 	private Criteria buildPatientStatusCriteria(Integer patientId, MemberStatus status, boolean includeVoided) {
 		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(CareModelMember.class);
 		criteria.add(Restrictions.eq("patientId", patientId));
@@ -159,7 +159,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		}
 		return criteria;
 	}
-
+	
 	@Override
 	public void voidCareModelMember(CareModelMember member, String reason) throws DAOException {
 		member.setVoided(true);
@@ -168,7 +168,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		member.setVoidedBy(org.openmrs.api.context.Context.getAuthenticatedUser());
 		sessionFactory.getCurrentSession().saveOrUpdate(member);
 	}
-
+	
 	@Override
 	public void unvoidCareModelMember(CareModelMember member) throws DAOException {
 		member.setVoided(false);
@@ -177,7 +177,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		member.setVoidedBy(null);
 		sessionFactory.getCurrentSession().saveOrUpdate(member);
 	}
-
+	
 	@Override
 	public void purgeCareModelMember(CareModelMember member) throws DAOException {
 		sessionFactory.getCurrentSession().delete(member);

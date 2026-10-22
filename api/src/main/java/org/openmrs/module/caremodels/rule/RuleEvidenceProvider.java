@@ -3,6 +3,6 @@ package org.openmrs.module.caremodels.rule;
 
 /** Supplies typed facts to the rule evaluator without coupling it to OpenMRS service lookups. */
 public interface RuleEvidenceProvider {
-
+	
 	RuleEvidence resolve(String type, String alias);
 }

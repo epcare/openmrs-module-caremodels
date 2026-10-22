@@ -13,10 +13,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import static org.junit.Assert.*;
 
 public class RecoveryPersistenceTest extends BaseModuleContextSensitiveTest {
-
+	
 	@Autowired
 	private CareModelDAO dao;
-
+	
 	@Test
 	public void recoveryQueriesMustBoundAndOrderPatientsAndLockCoreCheckpoint() {
 		int upper = dao.getMaximumPatientId();
@@ -29,7 +29,7 @@ public class RecoveryPersistenceTest extends BaseModuleContextSensitiveTest {
 		assertEquals("{}", dao.getReconciliationCursorForUpdate().getPropertyValue());
 		assertTrue(dao.getEnrollmentModelsAfter(0, 1).isEmpty());
 	}
-
+	
 	@Test
 	public void reviewHistoryMustRemainBoundedAndPreserveRecordedPathway() throws Exception {
 		CareModelMember member = new CareModelMember();

@@ -16,12 +16,12 @@ import org.openmrs.scheduler.tasks.AbstractTask;
 
 /** OpenMRS executes scheduled tasks in its daemon context; no clinical user impersonation. */
 public class CareModelsReconciliationTask extends AbstractTask {
-
+	
 	private static final java.util.logging.Logger LOG = java.util.logging.Logger
 	        .getLogger(CareModelsReconciliationTask.class.getName());
-
+	
 	private final AtomicBoolean running = new AtomicBoolean();
-
+	
 	@Override
 	public void execute() {
 		if (!running.compareAndSet(false, true))

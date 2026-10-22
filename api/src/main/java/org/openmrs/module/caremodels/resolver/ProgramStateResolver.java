@@ -18,22 +18,22 @@ import org.openmrs.api.context.Context;
 
 /** Exact program enrollment episodes and their recorded current states. */
 public class ProgramStateResolver implements DataResolver {
-
+	
 	@Override
 	public String getId() {
 		return "program-state";
 	}
-
+	
 	@Override
 	public String getReferenceKind() {
 		return "programs";
 	}
-
+	
 	@Override
 	public String getReferenceField() {
 		return "programAlias";
 	}
-
+	
 	@Override public JsonNode resolve(Integer patientId, JsonNode source, String reference) {
         Patient patient = ResolverSupport.patient(patientId);
         Program program = reference == null ? null : Context.getProgramWorkflowService().getProgramByUuid(reference);

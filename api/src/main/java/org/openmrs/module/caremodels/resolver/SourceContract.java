@@ -15,17 +15,17 @@ import org.openmrs.module.caremodels.config.ValidationResult;
 
 /** Executable source declarations; schema enums alone never enable a resolver. */
 public final class SourceContract {
-
+	
 	private static final org.openmrs.module.caremodels.config.JsonSchemaValidator SCHEMAS = new org.openmrs.module.caremodels.config.JsonSchemaValidator();
-
+	
 	private SourceContract() {
 	}
-
+	
 	public static String resolverId(JsonNode source) {
 		return "registered".equals(source.path("type").asText()) ? source.path("resolverId").asText() : source.path("type")
 		        .asText();
 	}
-
+	
 	public static ValidationResult validate(JsonNode source, DataResolverRegistry registry, String path) {
         ValidationResult result = SCHEMAS.validate(source, org.openmrs.module.caremodels.config.JsonSchemaValidator.SchemaType.DATA_SOURCE);
         if (!result.isValid()) return result;
@@ -75,13 +75,13 @@ public final class SourceContract {
         catch (IllegalArgumentException e) { result.addError(path, e.getMessage()); }
         return result;
     }
-
+	
 	public static ValidationResult validateResult(JsonNode result, DataResolver resolver) {
 		if (resolver instanceof VersionedDataResolver)
 			return validateSchema(result, ((VersionedDataResolver) resolver).getResultSchema(), "$.result");
 		return SCHEMAS.validate(result, org.openmrs.module.caremodels.config.JsonSchemaValidator.SchemaType.CLINICAL_RESULT);
 	}
-
+	
 	private static ValidationResult validateSchema(JsonNode value, JsonNode schema, String path) {
 		ValidationResult result = ValidationResult.valid();
 		if (schema == null || !schema.isObject()) {

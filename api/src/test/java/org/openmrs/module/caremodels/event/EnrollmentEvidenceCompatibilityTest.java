@@ -13,27 +13,27 @@ import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
 public class EnrollmentEvidenceCompatibilityTest {
-
+	
 	private final ObjectMapper mapper = new ObjectMapper();
-
+	
 	private final Date asOf = Date.from(java.time.Instant.parse("2025-01-10T00:00:00Z"));
-
+	
 	private MockedStatic<Context> context;
-
+	
 	private OpenmrsEnrollmentRuleEvidenceFactory factory;
-
+	
 	private Patient patient;
-
+	
 	private Concept concept;
-
+	
 	private ObsService observations;
-
+	
 	private ConceptService concepts;
-
+	
 	private ProgramWorkflowService programs;
-
+	
 	private JsonNode definition;
-
+	
 	@Before public void setup() throws Exception {
         context = mockStatic(Context.class); factory = new OpenmrsEnrollmentRuleEvidenceFactory();
         patient = new Patient(7); patient.setUuid("patient"); concept = new Concept(8); concept.setUuid("concept");
@@ -45,13 +45,13 @@ public class EnrollmentEvidenceCompatibilityTest {
         programs = mock(ProgramWorkflowService.class); context.when(Context::getProgramWorkflowService).thenReturn(programs);
         definition = mapper.readTree("{\"terminology\":{\"concepts\":{\"measurement\":\"concept\"},\"programs\":{\"care\":\"program\"},\"codedAnswers\":{\"earlier\":\"earlier-concept\",\"later\":\"later-concept\"}}}");
     }
-
+	
 	@After
 	public void cleanup() {
 		if (context != null)
 			context.close();
 	}
-
+	
 	private Obs obs(String modifier) {
 		Obs obs = new Obs();
 		obs.setUuid("observation");
@@ -62,13 +62,13 @@ public class EnrollmentEvidenceCompatibilityTest {
 		obs.setObsDatetime(asOf);
 		return obs;
 	}
-
+	
 	private void returned(Obs obs) {
 		when(
 		    observations.getObservations(anyList(), isNull(), anyList(), isNull(), isNull(), isNull(), anyList(), eq(1),
 		        isNull(), isNull(), eq(asOf), eq(false))).thenReturn(Collections.singletonList(obs));
 	}
-
+	
 	@Test
 	public void qualifiedObservationsMustNotBeTurnedIntoExactEnrollmentMeasurements() throws Exception {
 		returned(obs("<"));
@@ -78,7 +78,7 @@ public class EnrollmentEvidenceCompatibilityTest {
 		        .readTree("{\"type\":\"observation\",\"alias\":\"measurement\",\"operator\":\"LESS_THAN\",\"value\":100}");
 		assertEquals(TriState.UNKNOWN, new RuleExpressionEvaluator().evaluate(predicate, evidence, asOf));
 	}
-
+	
 	@Test
 	public void exactMeasurementsMustUseBoundedDeterministicObservationOrdering() {
 		returned(obs(null));
@@ -86,7 +86,7 @@ public class EnrollmentEvidenceCompatibilityTest {
 		verify(observations).getObservations(anyList(), isNull(), anyList(), isNull(), isNull(), isNull(),
 		    eq(Arrays.asList("obsDatetime desc", "uuid asc")), eq(1), isNull(), isNull(), eq(asOf), eq(false));
 	}
-
+	
 	@Test
 	public void retiredOrVoidedEvidenceMustNotEnroll() {
 		concept.setRetired(true);
@@ -100,7 +100,7 @@ public class EnrollmentEvidenceCompatibilityTest {
 		assertEquals(RuleEvidence.Availability.UNKNOWN,
 		    factory.create(7, definition, asOf).resolve("observation", "measurement").getAvailability());
 	}
-
+	
 	@Test public void programReplayMustUseStatesAtEvaluationTimeInsteadOfTodaysCurrentStates() {
         Program program = new Program(3); program.setUuid("program"); when(programs.getProgramByUuid("program")).thenReturn(program);
         PatientProgram episode = new PatientProgram(); episode.setPatient(patient); episode.setProgram(program); episode.setUuid("episode"); episode.setDateEnrolled(new Date(asOf.getTime()-100000));

@@ -14,9 +14,9 @@ import org.openmrs.module.caremodels.rule.RuleEvidence.Availability;
 
 /** Evaluates a structurally validated rule-expression tree using strong Kleene logic. */
 public class RuleExpressionEvaluator {
-
+	
 	private static final long DAY_MILLIS = 24L * 60L * 60L * 1000L;
-
+	
 	public TriState evaluate(JsonNode expression, RuleEvidenceProvider evidenceProvider, Date asOf) {
 		if (expression == null || expression.isMissingNode() || expression.isNull() || evidenceProvider == null) {
 			return TriState.UNKNOWN;
@@ -56,7 +56,7 @@ public class RuleExpressionEvaluator {
 		}
 		return evaluatePredicate(expression, evidenceProvider, asOf);
 	}
-
+	
 	private TriState evaluatePredicate(JsonNode predicate, RuleEvidenceProvider evidenceProvider, Date asOf) {
 		String type = predicate.path("type").asText(null);
 		String alias = predicate.path("alias").asText(null);
@@ -94,7 +94,7 @@ public class RuleExpressionEvaluator {
 				return fresh;
 			}
 		}
-
+		
 		JsonNode expected = predicate.has("codedAnswerAlias") ? predicate.path("codedAnswerAlias") : predicate.path("value");
 		if ("EQUALS".equals(operator) || "STATE_EQUALS".equals(operator) || "NOT_EQUALS".equals(operator)) {
 			TriState equals = valuesEqual(evidence.getValue(), expected);
@@ -106,7 +106,7 @@ public class RuleExpressionEvaluator {
 		}
 		return TriState.UNKNOWN;
 	}
-
+	
 	private TriState evaluateWindow(RuleEvidence evidence, int windowDays, Date asOf, boolean outside) {
 		Date effectiveTime = evidence.getEffectiveTime();
 		if (effectiveTime == null || asOf == null || windowDays < 1) {
@@ -119,7 +119,7 @@ public class RuleExpressionEvaluator {
 		TriState within = age <= windowDays * DAY_MILLIS ? TriState.TRUE : TriState.FALSE;
 		return outside ? within.not() : within;
 	}
-
+	
 	private TriState valuesEqual(Object actual, JsonNode expected) {
 		if (actual == null || expected == null || expected.isMissingNode() || expected.isNull()) {
 			return TriState.UNKNOWN;
@@ -140,7 +140,7 @@ public class RuleExpressionEvaluator {
 		}
 		return TriState.UNKNOWN;
 	}
-
+	
 	private TriState compareNumbers(Object actual, JsonNode expected, String operator) {
 		if (!(actual instanceof Number) || expected == null || !expected.isNumber()) {
 			return TriState.UNKNOWN;
@@ -156,7 +156,7 @@ public class RuleExpressionEvaluator {
 			return TriState.UNKNOWN;
 		}
 	}
-
+	
 	private BigDecimal decimal(Object value) {
 		return new BigDecimal(String.valueOf(value));
 	}

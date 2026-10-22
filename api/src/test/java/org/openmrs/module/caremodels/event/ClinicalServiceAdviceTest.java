@@ -29,11 +29,11 @@ import org.openmrs.api.ObsService;
 import org.openmrs.api.ProgramWorkflowService;
 
 public class ClinicalServiceAdviceTest {
-
+	
 	private final List<ClinicalChangeEvent> received = new CopyOnWriteArrayList<ClinicalChangeEvent>();
-
+	
 	private final ClinicalChangePublisher publisher = publisher();
-
+	
 	@Test
 	public void shouldClassifyNewEncounterAfterSuccessfulSave() throws Throwable {
 		Encounter encounter = encounter();
@@ -41,7 +41,7 @@ public class ClinicalServiceAdviceTest {
 		new EncounterServiceAdvice(publisher).invoke(invocation(method, new Object[] { encounter }, encounter));
 		assertEvent(ClinicalChangeEvent.TriggerType.ENCOUNTER_SAVED, "encounter", "encounter-type", null);
 	}
-
+	
 	@Test
 	public void shouldClassifyExistingEncounterAndUnvoidAsChanged() throws Throwable {
 		Encounter encounter = encounter();
@@ -50,7 +50,7 @@ public class ClinicalServiceAdviceTest {
 		new EncounterServiceAdvice(publisher).invoke(invocation(save, new Object[] { encounter }, encounter));
 		assertEvent(ClinicalChangeEvent.TriggerType.ENCOUNTER_CHANGED, "encounter", "encounter-type", "encounter");
 	}
-
+	
 	@Test
 	public void shouldClassifyObservationCorrectionAsChanged() throws Throwable {
 		Obs previous = observation();
@@ -63,7 +63,7 @@ public class ClinicalServiceAdviceTest {
 		new ObsServiceAdvice(publisher).invoke(invocation(method, new Object[] { correction, "correction" }, correction));
 		assertEvent(ClinicalChangeEvent.TriggerType.OBSERVATION_CHANGED, "replacement-obs", "concept", "original-obs");
 	}
-
+	
 	@Test
 	public void shouldPublishProgramChangesForVoidOperations() throws Throwable {
 		PatientProgram patientProgram = patientProgram();
@@ -72,7 +72,7 @@ public class ClinicalServiceAdviceTest {
 		        "entered in error" }, patientProgram));
 		assertEvent(ClinicalChangeEvent.TriggerType.PROGRAM_CHANGED, "patient-program", "program", "patient-program");
 	}
-
+	
 	@Test(expected = IllegalStateException.class)
 	public void shouldNotPublishWhenServiceWriteFails() throws Throwable {
 		Encounter encounter = encounter();
@@ -84,7 +84,7 @@ public class ClinicalServiceAdviceTest {
 			assertTrue(received.isEmpty());
 		}
 	}
-
+	
 	private void assertEvent(ClinicalChangeEvent.TriggerType type, String sourceUuid, String referenceUuid,
 	        String reviewSourceUuid) {
 		assertEquals(1, received.size());
@@ -95,11 +95,11 @@ public class ClinicalServiceAdviceTest {
 		assertEquals(referenceUuid, event.getReferenceUuid());
 		assertEquals(reviewSourceUuid, event.getReviewSourceUuid());
 	}
-
+	
 	private ClinicalChangePublisher publisher() {
 		ClinicalChangePublisher result = new ClinicalChangePublisher();
 		result.setListeners(Arrays.asList(new ClinicalChangeListener() {
-
+			
 			@Override
 			public void onClinicalChange(ClinicalChangeEvent event) {
 				received.add(event);
@@ -107,7 +107,7 @@ public class ClinicalServiceAdviceTest {
 		}));
 		return result;
 	}
-
+	
 	private Encounter encounter() {
 		Patient patient = new Patient();
 		patient.setUuid("patient");
@@ -119,7 +119,7 @@ public class ClinicalServiceAdviceTest {
 		encounter.setEncounterType(type);
 		return encounter;
 	}
-
+	
 	private Obs observation() {
 		Patient patient = new Patient();
 		patient.setUuid("patient");
@@ -132,7 +132,7 @@ public class ClinicalServiceAdviceTest {
 		obs.setObsDatetime(new Date());
 		return obs;
 	}
-
+	
 	private PatientProgram patientProgram() {
 		Patient patient = new Patient();
 		patient.setUuid("patient");
@@ -144,55 +144,55 @@ public class ClinicalServiceAdviceTest {
 		patientProgram.setProgram(program);
 		return patientProgram;
 	}
-
+	
 	private MethodInvocation invocation(final Method method, final Object[] arguments, final Object result) {
 		return new TestInvocation(
 		                          method, arguments) {
-
+			
 			@Override
 			public Object proceed() {
 				return result;
 			}
 		};
 	}
-
+	
 	private MethodInvocation failingInvocation(final Method method, final Object[] arguments) {
 		return new TestInvocation(
 		                          method, arguments) {
-
+			
 			@Override
 			public Object proceed() {
 				throw new IllegalStateException("write failed");
 			}
 		};
 	}
-
+	
 	private abstract static class TestInvocation implements MethodInvocation {
-
+		
 		private final Method method;
-
+		
 		private final Object[] arguments;
-
+		
 		TestInvocation(Method method, Object[] arguments) {
 			this.method = method;
 			this.arguments = arguments;
 		}
-
+		
 		@Override
 		public Method getMethod() {
 			return method;
 		}
-
+		
 		@Override
 		public Object[] getArguments() {
 			return arguments;
 		}
-
+		
 		@Override
 		public Object getThis() {
 			return null;
 		}
-
+		
 		@Override
 		public AccessibleObject getStaticPart() {
 			return method;

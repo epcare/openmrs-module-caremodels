@@ -39,50 +39,50 @@ import org.springframework.transaction.annotation.Transactional;
  * Default implementation of {@link CareModelService}.
  */
 public class CareModelServiceImpl extends BaseOpenmrsService implements CareModelService {
-
+	
 	private static final Logger log = LoggerFactory.getLogger(CareModelServiceImpl.class);
-
+	
 	private CareModelDAO dao;
-
+	
 	public CareModelDAO getDao() {
 		return dao;
 	}
-
+	
 	public void setDao(CareModelDAO dao) {
 		this.dao = dao;
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public CareModel getCareModel(Integer careModelId) throws APIException {
 		return dao.getCareModelById(careModelId);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public CareModel getCareModelByUuid(String uuid) throws APIException {
 		return dao.getCareModelByUuid(uuid);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public CareModel getCareModelByCode(String code) throws APIException {
 		return dao.getCareModelByCode(code);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public List<CareModel> getCareModels(String q, CareModelStatus status, boolean includeRetired, Integer startIndex,
 	        Integer limit) throws APIException {
 		return dao.getCareModels(q, status, includeRetired, startIndex, limit);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public long getCareModelsCount(String q, CareModelStatus status, boolean includeRetired) throws APIException {
 		return dao.getCareModelsCount(q, status, includeRetired);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModel saveCareModel(CareModel careModel) throws APIException {
@@ -99,13 +99,13 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		}
 		return dao.saveCareModel(careModel);
 	}
-
+	
 	@Override
 	@Transactional
 	public void purgeCareModel(CareModel careModel) throws APIException {
 		dao.purgeCareModel(careModel);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModel retireCareModel(CareModel careModel, String reason) throws APIException {
@@ -115,7 +115,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		careModel.setDateRetired(new Date());
 		return dao.saveCareModel(careModel);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModel unretireCareModel(CareModel careModel) throws APIException {
@@ -125,26 +125,26 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		careModel.setDateRetired(null);
 		return dao.saveCareModel(careModel);
 	}
-
+	
 	// ========================
 	// Lifecycle: draft, validate, publish, duplicate, import/export (W2)
 	// ========================
-
+	
 	private ObjectMapper objectMapper = new ObjectMapper().configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-
+	
 	private OpenmrsReferenceChecker referenceChecker = new OpenmrsReferenceChecker.OpenmrsApiReferenceChecker();
-
+	
 	private JsonSchemaValidator schemaValidator = new JsonSchemaValidator(objectMapper);
-
+	
 	private org.openmrs.module.caremodels.resolver.DataResolverRegistry resolverRegistry = new org.openmrs.module.caremodels.resolver.DataResolverRegistry();
-
+	
 	private SemanticValidator semanticValidator = new SemanticValidator(referenceChecker, resolverRegistry);
-
+	
 	public void setResolverRegistry(org.openmrs.module.caremodels.resolver.DataResolverRegistry registry) {
 		resolverRegistry = registry;
 		semanticValidator = new SemanticValidator(referenceChecker, registry);
 	}
-
+	
 	/**
 	 * Overridable for tests; production uses the OpenMRS API-backed checker.
 	 */
@@ -152,7 +152,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		this.referenceChecker = referenceChecker;
 		this.semanticValidator = new SemanticValidator(referenceChecker, resolverRegistry);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModel createCareModel(String code, String name, String description, String privilege, String definitionJson)
@@ -165,14 +165,14 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		}
 		assertPrivilegePresent(privilege);
 		assertDefinitionValid(definitionJson);
-
+		
 		CareModel model = new CareModel();
 		model.setCode(code.trim());
 		model.setName(name);
 		model.setDescription(description);
 		model.setPrivilege(privilege);
 		model.setStatus(CareModelStatus.DRAFT);
-
+		
 		StorageEnvelope envelope = new StorageEnvelope();
 		try {
 			envelope.saveDraft(objectMapper.readTree(definitionJson), 0);
@@ -183,13 +183,13 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		writeEnvelope(model, envelope);
 		return dao.saveCareModel(model);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModel saveDraft(String code, String definitionJson, Integer expectedRevision) throws APIException {
 		assertDefinitionValid(definitionJson);
 		CareModel model = getExistingModelByCodeForUpdate(code);
-
+		
 		StorageEnvelope envelope = readEnvelope(model);
 		try {
 			envelope.saveDraft(objectMapper.readTree(definitionJson), expectedRevision);
@@ -204,7 +204,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		writeEnvelope(model, envelope);
 		return dao.saveCareModel(model);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public ValidationResult validateDraft(String definitionJson) throws APIException {
@@ -219,7 +219,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		}
 		return result;
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModel publishCareModel(String code, String version, Integer expectedRevision) throws APIException {
@@ -227,34 +227,34 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		if (!Context.hasPrivilege(CareModelsPrivileges.PUBLISH_CARE_MODELS)) {
 			throw new APIException("Publishing requires the " + CareModelsPrivileges.PUBLISH_CARE_MODELS + " privilege");
 		}
-
+		
 		CareModel model = getExistingModelByCodeForUpdate(code);
-
+		
 		// MOD-007: a model whose required privilege is unregistered cannot publish
 		assertPrivilegePresent(model.getPrivilege());
 		if (!referenceChecker.privilegeExists(model.getPrivilege())) {
 			throw new APIException("Cannot publish: required view privilege '" + model.getPrivilege()
 			        + "' is not registered in OpenMRS");
 		}
-
+		
 		StorageEnvelope envelope = readEnvelope(model);
 		if (envelope.getDraft() == null || envelope.getDraft().getDefinition() == null) {
 			throw new APIException("No draft to publish for model '" + code + "'");
 		}
-
+		
 		// MOD-007 / AC12: full revalidation at publication time, not only at draft-save time
 		String definitionJson = envelope.getDraft().getDefinition().toString();
 		ValidationResult result = validateDraft(definitionJson);
 		if (!result.isValid()) {
 			throw new APIException("Cannot publish an invalid definition: " + result);
 		}
-
+		
 		envelope.publishDraft(version, expectedRevision, new Date());
 		model.setStatus(CareModelStatus.PUBLISHED);
 		writeEnvelope(model, envelope);
 		return dao.saveCareModel(model);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public String getPublishedDefinition(String code) throws APIException {
@@ -264,13 +264,13 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		}
 		return envelope.getPublished().getDefinition().toString();
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public String getEnvelope(String code) throws APIException {
 		return getExistingModelByCode(code).getConfiguration();
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModel duplicateFromPublished(String sourceCode, String newCode, String newName, String privilege)
@@ -279,19 +279,19 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 			throw new APIException("A Care Model with code '" + newCode + "' already exists");
 		}
 		assertPrivilegePresent(privilege);
-
+		
 		String published = getPublishedDefinition(sourceCode);
 		if (published == null) {
 			throw new APIException("Model '" + sourceCode + "' has no published version to duplicate");
 		}
 		assertDefinitionValid(published);
-
+		
 		CareModel duplicate = new CareModel();
 		duplicate.setCode(newCode.trim());
 		duplicate.setName(newName);
 		duplicate.setPrivilege(privilege);
 		duplicate.setStatus(CareModelStatus.DRAFT);
-
+		
 		StorageEnvelope envelope = new StorageEnvelope();
 		try {
 			envelope.saveDraft(objectMapper.readTree(published), 0);
@@ -302,7 +302,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		writeEnvelope(duplicate, envelope);
 		return dao.saveCareModel(duplicate);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModel importModel(String code, String name, String privilege, String envelopeJson) throws APIException {
@@ -310,12 +310,12 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 			throw new APIException("A Care Model with code '" + code + "' already exists");
 		}
 		assertPrivilegePresent(privilege);
-
+		
 		ValidationResult result = schemaValidator.validate(envelopeJson, JsonSchemaValidator.SchemaType.STORAGE_ENVELOPE);
 		if (!result.isValid()) {
 			throw new APIException("Imported envelope is invalid: " + result);
 		}
-
+		
 		StorageEnvelope envelope = StorageEnvelope.fromJson(objectMapper, envelopeJson);
 		ValidationResult integrityResult = StorageEnvelopeValidator.validate(envelope);
 		if (!integrityResult.isValid()) {
@@ -344,7 +344,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 				throw new APIException("Imported history[" + i + "] definition is invalid: " + historyResult);
 			}
 		}
-
+		
 		CareModel model = new CareModel();
 		model.setCode(code.trim());
 		model.setName(name);
@@ -353,7 +353,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		writeEnvelope(model, envelope);
 		return dao.saveCareModel(model);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModel deactivateCareModel(String code) throws APIException {
@@ -364,7 +364,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		model.setStatus(CareModelStatus.INACTIVE);
 		return dao.saveCareModel(model);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModel reactivateCareModel(String code) throws APIException {
@@ -378,11 +378,11 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		model.setStatus(CareModelStatus.PUBLISHED);
 		return dao.saveCareModel(model);
 	}
-
+	
 	// ========================
 	// Internal helpers
 	// ========================
-
+	
 	private CareModel getExistingModelByCode(String code) {
 		if (code == null) {
 			throw new APIException("Care Model code is required");
@@ -393,7 +393,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		}
 		return model;
 	}
-
+	
 	private CareModel getExistingModelByCodeForUpdate(String code) {
 		if (code == null) {
 			throw new APIException("Care Model code is required");
@@ -404,11 +404,11 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		}
 		return model;
 	}
-
+	
 	private StorageEnvelope readEnvelope(CareModel model) {
 		return StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
 	}
-
+	
 	/**
 	 * Persists the envelope back onto the entity; the entity revision column mirrors the envelope
 	 * revision so callers can read it without parsing the JSON.
@@ -417,14 +417,14 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		model.setConfiguration(envelope.toJson(objectMapper));
 		model.setRevision(envelope.getRevision());
 	}
-
+	
 	private void assertPrivilegePresent(String privilege) {
 		if (privilege == null || privilege.trim().isEmpty()) {
 			// fail closed: a model without a required view privilege is never public
 			throw new APIException("Care Model required view privilege is required");
 		}
 	}
-
+	
 	private void assertDefinitionValid(String definitionJson) {
 		ValidationResult result = validateDraft(definitionJson);
 		if (!result.isValid()) {

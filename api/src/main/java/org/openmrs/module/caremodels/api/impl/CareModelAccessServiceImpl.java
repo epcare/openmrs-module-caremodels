@@ -40,21 +40,21 @@ import org.springframework.transaction.annotation.Transactional;
  * the fail-closed rule is per model).
  */
 public class CareModelAccessServiceImpl extends BaseOpenmrsService implements CareModelAccessService {
-
+	
 	private ObjectMapper objectMapper = new ObjectMapper();
-
+	
 	private CareModelMemberService memberService;
-
+	
 	private CareModelDAO careModelDAO;
-
+	
 	public void setMemberService(CareModelMemberService memberService) {
 		this.memberService = memberService;
 	}
-
+	
 	public void setCareModelDAO(CareModelDAO careModelDAO) {
 		this.careModelDAO = careModelDAO;
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public void requireMasterPrivilege() throws APIException {
@@ -63,7 +63,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			        + " privilege");
 		}
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public String requirePatientAccess(String patientUuid) throws APIException {
@@ -78,22 +78,22 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		}
 		return patient.getUuid();
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public List<CareModelMembershipDTO> getAuthorizedMemberships(String patientUuid) throws APIException {
 		// steps 1-2: master privilege and patient access
 		requireMasterPrivilege();
 		String resolvedPatientUuid = requirePatientAccess(patientUuid);
-
+		
 		Patient patient = Context.getPatientService().getPatientByUuid(resolvedPatientUuid);
-
+		
 		// step 3: indexed active-membership lookup; no rule evaluation and no resolver calls here
 		List<CareModelMember> members = memberService.getActiveMembersByPatient(patient.getPatientId());
 		if (members.isEmpty()) {
 			return new ArrayList<CareModelMembershipDTO>();
 		}
-
+		
 		// step 4: join model metadata (projection; configuration is never selected)
 		List<Integer> modelIds = new ArrayList<Integer>();
 		Map<Integer, CareModelMember> memberByModelId = new HashMap<Integer, CareModelMember>();
@@ -102,7 +102,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			memberByModelId.put(member.getCareModelId(), member);
 		}
 		List<CareModelRef> modelRefs = careModelDAO.getModelRefs(modelIds);
-
+		
 		List<CareModelMembershipDTO> result = new ArrayList<CareModelMembershipDTO>();
 		for (CareModelRef modelRef : modelRefs) {
 			if (!isModelVisible(modelRef)) {
@@ -124,7 +124,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		}
 		return result;
 	}
-
+	
 	private boolean isModelVisible(CareModelRef modelRef) {
 		// fail closed: only PUBLISHED, non-retired models whose named privilege the user holds
 		if (Boolean.TRUE.equals(modelRef.getRetired())) {
@@ -140,7 +140,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		}
 		return Context.hasPrivilege(privilege);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public AuthorizedAccess authorizeWorkspace(String patientUuid, String modelCodeOrUuid, String tabId) throws APIException {
@@ -148,7 +148,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		requireMasterPrivilege();
 		String resolvedPatientUuid = requirePatientAccess(patientUuid);
 		Patient patient = Context.getPatientService().getPatientByUuid(resolvedPatientUuid);
-
+		
 		CareModel model = findModel(modelCodeOrUuid);
 		if (model == null) {
 			// do not disclose whether the model exists
@@ -157,12 +157,12 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		if (!isModelVisible(toRef(model))) {
 			throw new APIException("Care Model not found or not authorized");
 		}
-
+		
 		CareModelMember member = memberService.getCurrentMember(patient.getPatientId(), model.getId());
 		if (member == null || member.getVoided() || member.getStatus() != CareModelMember.MemberStatus.ACTIVE) {
 			throw new APIException("No active membership in this Care Model");
 		}
-
+		
 		// only now is the published definition loaded, and only for this model
 		StorageEnvelope envelope;
 		try {
@@ -174,11 +174,11 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		if (envelope.getPublished() == null || envelope.getPublished().getDefinition() == null) {
 			throw new APIException("Care Model not found or not authorized");
 		}
-
+		
 		JsonNode published = envelope.getPublished().getDefinition();
 		if (!published.isObject())
 			throw new APIException("Care Model not found or not authorized");
-
+		
 		JsonNode workspaceNode = published.path("workspace");
 		String resolvedTabId = tabId;
 		if (resolvedTabId == null) {
@@ -192,7 +192,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		if (tab == null) {
 			throw new APIException("Requested tab is not part of this Care Model");
 		}
-
+		
 		if (tab.has("visibilityRule")) {
 			org.openmrs.module.caremodels.event.EnrollmentRuleEvidenceFactory evidence = Context.getRegisteredComponent(
 			    "caremodels.EnrollmentRuleEvidenceFactory",
@@ -203,7 +203,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			            evidence.create(patient.getId(), published, asOf), asOf) != org.openmrs.module.caremodels.rule.TriState.TRUE)
 				throw new APIException("Requested tab is not authorized");
 		}
-
+		
 		// tab summary (id + label only): lets the frontend render the inner-tab strip without
 		// ever receiving widget definitions of tabs it has not opened
 		com.fasterxml.jackson.databind.node.ArrayNode tabs = new com.fasterxml.jackson.databind.node.ArrayNode(
@@ -213,7 +213,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			summary.put("id", authoredTab.path("id").asText());
 			summary.put("label", authoredTab.path("label").asText());
 		}
-
+		
 		AuthorizedAccess authorized = new AuthorizedAccess(resolvedPatientUuid, model.getCode(), model.getUuid(),
 		        member.getUuid(), published, tab, tabs);
 		boolean pathwayRequested = false;
@@ -223,7 +223,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			authorized.setMemberPathway(readMemberPathway(member, published));
 		return authorized;
 	}
-
+	
 	private JsonNode readMemberPathway(CareModelMember member, JsonNode published) {
         com.fasterxml.jackson.databind.node.ObjectNode result = objectMapper.createObjectNode().put("status", "insufficient-data");
         if (!published.path("pathways").path("enabled").asBoolean()) return result.put("reason", "pathway-not-enabled");
@@ -248,7 +248,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
         }
         return result.put("reason", "no-recorded-stage");
     }
-
+	
 	private JsonNode findTab(JsonNode published, String tabId) {
 		JsonNode tabs = published.path("workspace").path("tabs");
 		for (JsonNode tab : tabs) {
@@ -258,7 +258,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		}
 		return null;
 	}
-
+	
 	private CareModel findModel(String codeOrUuid) {
 		if (codeOrUuid == null || codeOrUuid.trim().isEmpty()) {
 			return null;
@@ -269,7 +269,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		}
 		return careModelDAO.getCareModelByCode(value);
 	}
-
+	
 	private CareModelRef toRef(CareModel model) {
 		CareModelRef ref = new CareModelRef();
 		ref.setCareModelId(model.getId());

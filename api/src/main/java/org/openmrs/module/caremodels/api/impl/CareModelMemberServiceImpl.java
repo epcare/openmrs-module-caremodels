@@ -26,15 +26,15 @@ import org.springframework.transaction.annotation.Transactional;
  * Default implementation of {@link CareModelMemberService}.
  */
 public class CareModelMemberServiceImpl extends BaseOpenmrsService implements CareModelMemberService {
-
+	
 	private CareModelMemberDAO dao;
 	
 	private CareModelEnrollmentService enrollmentService;
-
+	
 	public CareModelMemberDAO getDao() {
 		return dao;
 	}
-
+	
 	public void setDao(CareModelMemberDAO dao) {
 		this.dao = dao;
 	}
@@ -42,56 +42,56 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 	public void setEnrollmentService(CareModelEnrollmentService enrollmentService) {
 		this.enrollmentService = enrollmentService;
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public CareModelMember getMember(Integer careModelMemberId) throws APIException {
 		return dao.getCareModelMemberById(careModelMemberId);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public CareModelMember getMemberByUuid(String uuid) throws APIException {
 		return dao.getCareModelMemberByUuid(uuid);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public CareModelMember getCurrentMember(Integer patientId, Integer careModelId) throws APIException {
 		return dao.getCurrentMember(patientId, careModelId);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public List<CareModelMember> getMembersByPatientAndModel(Integer patientId, Integer careModelId) throws APIException {
 		return dao.getMembersByPatientAndModel(patientId, careModelId);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public List<CareModelMember> getActiveMembersByPatient(Integer patientId) throws APIException {
 		return dao.getActiveMembersByPatient(patientId);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public List<CareModelMember> getActiveMembersByModel(Integer careModelId) throws APIException {
 		return dao.getActiveMembersByModel(careModelId);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public List<CareModelMember> getMembersByPatientAndStatus(Integer patientId, MemberStatus status, boolean includeVoided,
 	        Integer startIndex, Integer limit) throws APIException {
 		return dao.getMembersByPatientAndStatus(patientId, status, includeVoided, startIndex, limit);
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public long getMembersCount(Integer patientId, MemberStatus status, boolean includeVoided) throws APIException {
 		return dao.getMembersCount(patientId, status, includeVoided);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModelMember saveMember(CareModelMember member) throws APIException {
@@ -103,7 +103,7 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 		}
 		return dao.saveCareModelMember(member);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModelMember transitionMember(CareModelMember member, MemberStatus newStatus, String reason, Date asOf)
@@ -113,21 +113,21 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 		}
 		return enrollmentService.transitionEnrollment(member.getUuid(), newStatus, reason, asOf);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModelMember voidMember(CareModelMember member, String reason) throws APIException {
 		dao.voidCareModelMember(member, reason);
 		return member;
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModelMember unvoidMember(CareModelMember member) throws APIException {
 		dao.unvoidCareModelMember(member);
 		return member;
 	}
-
+	
 	@Override
 	@Transactional
 	public void purgeMember(CareModelMember member) throws APIException {

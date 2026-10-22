@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 public class CareModelsResourceControllerTest {
-
+	
 	@Test
 	public void shouldResolveEveryRegisteredResourceThroughCareModelsNamespace() {
 		CareModelsResourceController controller = new CareModelsResourceController();

@@ -36,28 +36,28 @@ import org.openmrs.module.webservices.rest.web.response.ResponseException;
  */
 @Resource(name = RestConstants.VERSION_1 + "/caremodels/membership", supportedClass = CareModelMembershipDTO.class, supportedOpenmrsVersions = { "1.8 - 9.0.*" })
 public class MembershipResource extends DelegatingCrudResource<CareModelMembershipDTO> {
-
+	
 	@Override
 	public CareModelMembershipDTO newDelegate() {
 		return new CareModelMembershipDTO();
 	}
-
+	
 	@Override
 	public CareModelMembershipDTO save(CareModelMembershipDTO delegate) {
 		throw new UnsupportedOperationException("Memberships are managed by the enrollment engine");
 	}
-
+	
 	@Override
 	public CareModelMembershipDTO getByUniqueId(String uniqueId) {
 		throw new UnsupportedOperationException("Memberships are listed per patient; use ?patient={uuid}");
 	}
-
+	
 	/** RESTWS dispatches requests containing q/patient/model/tab filters through search(). */
 	@Override
 	protected PageableResult doSearch(RequestContext context) throws ResponseException {
 		return doGetAll(context);
 	}
-
+	
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		String patientUuid = trimToNull(context.getParameter("patient"));
@@ -68,17 +68,17 @@ public class MembershipResource extends DelegatingCrudResource<CareModelMembersh
 		        .getAuthorizedMemberships(patientUuid);
 		return new NeedsPaging<CareModelMembershipDTO>(memberships, context);
 	}
-
+	
 	@Override
 	protected void delete(CareModelMembershipDTO delegate, String reason, RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("Delete is not supported for membership");
 	}
-
+	
 	@Override
 	public void purge(CareModelMembershipDTO delegate, RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("Purge is not supported for membership");
 	}
-
+	
 	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
@@ -93,12 +93,12 @@ public class MembershipResource extends DelegatingCrudResource<CareModelMembersh
 		}
 		return description;
 	}
-
+	
 	@Override
 	public String getResourceVersion() {
 		return "1.0";
 	}
-
+	
 	private static String trimToNull(String value) {
 		if (value == null) {
 			return null;

@@ -17,12 +17,12 @@ import org.openmrs.module.caremodels.model.CareModelMember;
 
 /** Bounded audit updates preserve enrollment provenance and recorded pathway state. */
 public final class MembershipHistory {
-
+	
 	private static final ObjectMapper MAPPER = new ObjectMapper();
-
+	
 	private MembershipHistory() {
 	}
-
+	
 	public static boolean append(CareModelMember member, String version, String type, Date at, String reason,
 	        String sourceUuid, String actor, boolean deduplicateSource) {
 		try {

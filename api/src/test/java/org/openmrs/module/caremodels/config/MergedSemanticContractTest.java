@@ -10,11 +10,11 @@ import static org.mockito.Mockito.*;
 
 /** The incoming rule checks and widget branch contracts must hold simultaneously. */
 public class MergedSemanticContractTest {
-
+	
 	private final ObjectMapper mapper = new ObjectMapper();
-
+	
 	private SemanticValidator semantic;
-
+	
 	@Before
 	public void setup() {
 		OpenmrsReferenceChecker checker = mock(OpenmrsReferenceChecker.class);
@@ -24,25 +24,25 @@ public class MergedSemanticContractTest {
 		when(checker.formExists(anyString())).thenReturn(true);
 		semantic = new SemanticValidator(checker);
 	}
-
+	
 	private ObjectNode model() throws Exception {
 		return (ObjectNode) mapper.readTree(Fixtures.sample("hiv-model"));
 	}
-
+	
 	@Test
 	public void numericObservationCollectionsMustRemainValidForExistingChartsAndTables() throws Exception {
 		ObjectNode definition = model();
 		((ObjectNode) definition.path("dataSources").path("viral_load_history")).put("resultType", "NUMBER");
 		assertTrue(semantic.validateDefinition(definition).toString(), semantic.validateDefinition(definition).isValid());
 	}
-
+	
 	@Test
 	public void metricMustRejectCollectionResultTypes() throws Exception {
 		ObjectNode definition = model();
 		((ObjectNode) definition.path("dataSources").path("cd4_latest")).put("resultType", "TABLE");
 		assertFalse(semantic.validateDefinition(definition).isValid());
 	}
-
+	
 	@Test
 	public void staticWidgetsAndMultiBindingsMustCoexistWithNestedEnrollmentValidation() throws Exception {
 		ObjectNode definition = model();
@@ -61,7 +61,7 @@ public class MergedSemanticContractTest {
 		            mapper.readTree("{\"all\":[{\"type\":\"observation\",\"operator\":\"EXISTS\",\"alias\":\"undeclared\"}]}"));
 		assertFalse(semantic.validateDefinition(definition).isValid());
 	}
-
+	
 	@Test
 	public void registeredSourcesMustStillRequireExecutableApprovedVersions() throws Exception {
 		ObjectNode definition = model();

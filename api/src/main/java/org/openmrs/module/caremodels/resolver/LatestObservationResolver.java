@@ -20,25 +20,25 @@ import org.openmrs.api.context.Context;
 
 /** Bounded observation values. Keeps the original values[] wire contract. */
 public class LatestObservationResolver implements DataResolver {
-
+	
 	private final String id;
-
+	
 	private final Clock clock;
-
+	
 	public LatestObservationResolver() {
 		this("latest-observation", Clock.systemUTC());
 	}
-
+	
 	public LatestObservationResolver(String id, Clock clock) {
 		this.id = id;
 		this.clock = clock;
 	}
-
+	
 	@Override
 	public String getId() {
 		return id;
 	}
-
+	
 	@Override public JsonNode resolve(Integer patientId, JsonNode source, String reference) {
         Patient patient = ResolverSupport.patient(patientId);
         if (reference == null) throw new IllegalArgumentException("A declared concept alias is required");

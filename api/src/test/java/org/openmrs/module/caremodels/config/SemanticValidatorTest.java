@@ -25,60 +25,60 @@ import static org.junit.Assert.assertTrue;
  * precondition; these tests exercise the OpenMRS-aware cross-reference pass.
  */
 public class SemanticValidatorTest {
-
+	
 	private static final class AllReferencesExist implements OpenmrsReferenceChecker {
-
+		
 		@Override
 		public boolean conceptExists(String uuid) {
 			return true;
 		}
-
+		
 		@Override
 		public boolean programExists(String uuid) {
 			return true;
 		}
-
+		
 		@Override
 		public boolean encounterTypeExists(String uuid) {
 			return true;
 		}
-
+		
 		@Override
 		public boolean formExists(String uuid) {
 			return true;
 		}
-
+		
 		@Override
 		public boolean privilegeExists(String name) {
 			return true;
 		}
 	}
-
+	
 	private ObjectMapper mapper;
-
+	
 	private SemanticValidator validator;
-
+	
 	@Before
 	public void setup() {
 		mapper = new ObjectMapper();
 		validator = new SemanticValidator(new AllReferencesExist());
 	}
-
+	
 	private JsonNode parse(String name) throws Exception {
 		return mapper.readTree(Fixtures.sample(name));
 	}
-
+	
 	@Test
 	public void shouldAcceptValidHivModel() throws Exception {
 		Fixtures.assertValid(validator.validateDefinition(parse("hiv-model")), "HIV model");
 	}
-
+	
 	@Test
 	public void shouldAcceptValidAncAndNcdModels() throws Exception {
 		Fixtures.assertValid(validator.validateDefinition(parse("anc-model")), "ANC model");
 		Fixtures.assertValid(validator.validateDefinition(parse("ncd-model")), "NCD model");
 	}
-
+	
 	@Test
 	public void shouldRejectDataSourceConceptAliasNotDeclaredInTerminology() throws Exception {
 		JsonNode definition = parse("hiv-model");
@@ -87,7 +87,7 @@ public class SemanticValidatorTest {
 		        .remove("viral_load");
 		Fixtures.assertInvalid(validator.validateDefinition(definition), "undeclared concept alias");
 	}
-
+	
 	@Test
 	public void shouldRejectWidgetReferencingUndeclaredDataSource() throws Exception {
 		JsonNode definition = parse("hiv-model");
@@ -97,7 +97,7 @@ public class SemanticValidatorTest {
 		Fixtures.assertInvalid(result, "undeclared data source");
 		assertTrue("error should name the data source key, got: " + result, result.toString().contains("cd4_latest"));
 	}
-
+	
 	@Test
 	public void shouldRejectWidgetReferencingUndeclaredAction() throws Exception {
 		JsonNode definition = parse("hiv-model");
@@ -105,7 +105,7 @@ public class SemanticValidatorTest {
 		((com.fasterxml.jackson.databind.node.ArrayNode) definition.path("actions")).remove(0);
 		Fixtures.assertInvalid(validator.validateDefinition(definition), "undeclared action");
 	}
-
+	
 	@Test
 	public void shouldRejectActionLaunchingUndeclaredForm() throws Exception {
 		JsonNode definition = parse("hiv-model");
@@ -113,14 +113,14 @@ public class SemanticValidatorTest {
 		((com.fasterxml.jackson.databind.node.ArrayNode) definition.path("forms")).remove(0);
 		Fixtures.assertInvalid(validator.validateDefinition(definition), "launch-form with undeclared form");
 	}
-
+	
 	@Test
 	public void shouldRejectDefaultTabThatDoesNotExist() throws Exception {
 		JsonNode definition = parse("hiv-model");
 		((com.fasterxml.jackson.databind.node.ObjectNode) definition.path("workspace")).put("defaultTab", "nope");
 		Fixtures.assertInvalid(validator.validateDefinition(definition), "bogus defaultTab");
 	}
-
+	
 	@Test
 	public void shouldRejectBannedPrivilegeKeyEvenWhenSchemaIsBypassed() throws Exception {
 		// construct in-memory: bypass the schema to prove the semantic pass is an independent guard
@@ -130,19 +130,19 @@ public class SemanticValidatorTest {
 		ValidationResult result = validator.validateDefinition(definition);
 		Fixtures.assertInvalid(result, "banned privilege key");
 	}
-
+	
 	@Test
 	public void shouldRejectArbitraryUrlInWidgetProperties() throws Exception {
 		Fixtures.assertInvalid(validator.validateDefinition(mapper.readTree(Fixtures.negative("arbitrary-url"))),
 		    "arbitrary URL in widget properties");
 	}
-
+	
 	@Test
 	public void shouldRejectUnregisteredWidgetTypeDirectly() throws Exception {
 		Fixtures.assertInvalid(validator.validateDefinition(mapper.readTree(Fixtures.negative("unregistered-widget"))),
 		    "unregistered widget type");
 	}
-
+	
 	@Test
 	public void shouldRejectFacilityOverlayEvenWhenSchemaIsBypassed() throws Exception {
 		JsonNode definition = mapper.readTree(Fixtures.sample("minimal-model"));
@@ -150,7 +150,7 @@ public class SemanticValidatorTest {
 		    mapper.readTree("[{\"uuid\": \"x\"}]"));
 		Fixtures.assertInvalid(validator.validateDefinition(definition), "facilities key");
 	}
-
+	
 	@Test
 	public void shouldValidateAliasesInsideNestedRules() throws Exception {
 		JsonNode definition = parse("minimal-model");
@@ -159,7 +159,7 @@ public class SemanticValidatorTest {
 		    mapper.readTree("{\"all\":[{\"type\":\"observation\",\"operator\":\"EXISTS\",\"alias\":\"missing\"}]}"));
 		Fixtures.assertInvalid(validator.validateDefinition(definition), "nested undeclared rule alias");
 	}
-
+	
 	@Test
 	public void shouldRejectLayoutReferencesAndGridOverflow() throws Exception {
 		JsonNode definition = parse("minimal-model");
@@ -170,7 +170,7 @@ public class SemanticValidatorTest {
 		assertTrue(result.toString(), result.toString().contains("undeclared widget"));
 		assertTrue(result.toString(), result.toString().contains("12-column"));
 	}
-
+	
 	@Test
 	public void shouldRejectIncompatibleWidgetResultType() throws Exception {
 		JsonNode definition = parse("hiv-model");
@@ -178,7 +178,7 @@ public class SemanticValidatorTest {
 		    "resultType", "STRING");
 		Fixtures.assertInvalid(validator.validateDefinition(definition), "trend chart result mismatch");
 	}
-
+	
 	@Test
 	public void shouldRejectTriggerWithUndeclaredAlias() throws Exception {
 		JsonNode definition = parse("minimal-model");
@@ -186,7 +186,7 @@ public class SemanticValidatorTest {
 		    mapper.readTree("[{\"type\":\"OBSERVATION_SAVED\",\"conceptAlias\":\"missing\"}]"));
 		Fixtures.assertInvalid(validator.validateDefinition(definition), "trigger alias");
 	}
-
+	
 	@Test
 	public void shouldRejectTransitionWithUndeclaredStage() throws Exception {
 		JsonNode definition = parse("minimal-model");

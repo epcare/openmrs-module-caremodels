@@ -18,22 +18,22 @@ import org.openmrs.api.context.Context;
 
 /** Longitudinal conditions; does not relabel encounter diagnoses as conditions. */
 public class ConditionResolver implements DataResolver {
-
+	
 	@Override
 	public String getId() {
 		return "conditions";
 	}
-
+	
 	@Override
 	public String getReferenceKind() {
 		return null;
 	}
-
+	
 	@Override
 	public String getReferenceField() {
 		return null;
 	}
-
+	
 	@Override public JsonNode resolve(Integer patientId, JsonNode source, String unused) {
         Patient patient = ResolverSupport.patient(patientId);
         Instant now = Instant.now();
@@ -65,7 +65,7 @@ public class ConditionResolver implements DataResolver {
         ResolverSupport.collection(result, records, safe.size(), limit);
         return result;
     }
-
+	
 	static void coded(ObjectNode row, CodedOrFreeText value) {
 		row.put("conceptUuid", value == null || value.getCoded() == null ? null : value.getCoded().getUuid());
 		row.put("name", value == null ? null : value.getCoded() != null && value.getCoded().getName() != null ? value

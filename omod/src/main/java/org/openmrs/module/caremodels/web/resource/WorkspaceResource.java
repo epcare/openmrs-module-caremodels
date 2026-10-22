@@ -42,28 +42,28 @@ import org.openmrs.module.webservices.rest.web.response.ResponseException;
  */
 @Resource(name = RestConstants.VERSION_1 + "/caremodels/workspace", supportedClass = WorkspaceTab.class, supportedOpenmrsVersions = { "1.8 - 9.0.*" })
 public class WorkspaceResource extends DelegatingCrudResource<WorkspaceTab> {
-
+	
 	@Override
 	public WorkspaceTab newDelegate() {
 		return new WorkspaceTab();
 	}
-
+	
 	@Override
 	public WorkspaceTab save(WorkspaceTab delegate) {
 		throw new UnsupportedOperationException("Workspace definitions are authored in the designer");
 	}
-
+	
 	@Override
 	public WorkspaceTab getByUniqueId(String uniqueId) {
 		throw new UnsupportedOperationException("Use ?patient=&model=&tab=");
 	}
-
+	
 	/** RESTWS dispatches requests containing q/patient/model/tab filters through search(). */
 	@Override
 	protected PageableResult doSearch(RequestContext context) throws ResponseException {
 		return doGetAll(context);
 	}
-
+	
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		String patient = trimToNull(context.getParameter("patient"));
@@ -73,29 +73,29 @@ public class WorkspaceResource extends DelegatingCrudResource<WorkspaceTab> {
 			throw new IllegalArgumentException(
 			        "The patient and model parameters are required; tab is optional (default tab)");
 		}
-
+		
 		AuthorizedAccess access = Context.getService(CareModelAccessService.class).authorizeWorkspace(patient, model, tab);
-
+		
 		WorkspaceTab result = new WorkspaceTab();
 		result.setModelCode(access.getModelCode());
 		result.setModelUuid(access.getModelUuid());
 		result.setMemberUuid(access.getMemberUuid());
 		result.setTabId(access.getTabDefinition().path("id").asText(null));
 		result.setTabLabel(access.getTabDefinition().path("label").asText(null));
-
+		
 		List<JsonNode> widgets = new ArrayList<JsonNode>();
 		for (JsonNode widget : access.getTabDefinition().path("widgets")) {
 			widgets.add(widget);
 		}
 		result.setWidgets(widgets);
-
+		
 		JsonNode layouts = access.getTabDefinition().path("layouts");
 		Iterator<Map.Entry<String, JsonNode>> layoutFields = layouts.fields();
 		while (layoutFields.hasNext()) {
 			Map.Entry<String, JsonNode> field = layoutFields.next();
 			result.getLayouts().put(field.getKey(), field.getValue());
 		}
-
+		
 		List<JsonNode> tabs = new ArrayList<JsonNode>();
 		for (JsonNode summary : access.getTabs()) {
 			tabs.add(summary);
@@ -104,17 +104,17 @@ public class WorkspaceResource extends DelegatingCrudResource<WorkspaceTab> {
 		result.setDescriptors(new org.openmrs.module.caremodels.workspace.WorkspaceDescriptors().resolve(access));
 		return new NeedsPaging<WorkspaceTab>(Collections.singletonList(result), context);
 	}
-
+	
 	@Override
 	protected void delete(WorkspaceTab delegate, String reason, RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("Delete is not supported for workspace");
 	}
-
+	
 	@Override
 	public void purge(WorkspaceTab delegate, RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("Purge is not supported for workspace");
 	}
-
+	
 	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
@@ -131,12 +131,12 @@ public class WorkspaceResource extends DelegatingCrudResource<WorkspaceTab> {
 		}
 		return description;
 	}
-
+	
 	@Override
 	public String getResourceVersion() {
 		return "1.0";
 	}
-
+	
 	private static String trimToNull(String value) {
 		if (value == null) {
 			return null;

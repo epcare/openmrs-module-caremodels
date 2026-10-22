@@ -40,16 +40,16 @@ import org.openmrs.module.webservices.rest.web.response.ResponseException;
  */
 @Resource(name = RestConstants.VERSION_1 + "/caremodels/model", supportedClass = CareModel.class, supportedOpenmrsVersions = { "1.8 - 9.0.*" })
 public class ModelResource extends DelegatingCrudResource<CareModel> {
-
+	
 	private CareModelService service() {
 		return Context.getService(CareModelService.class);
 	}
-
+	
 	@Override
 	public CareModel newDelegate() {
 		return new CareModel();
 	}
-
+	
 	@Override
 	public CareModel save(CareModel delegate) {
 		// POST to the collection creates with an initial definition; POST to /{id} updates metadata
@@ -59,7 +59,7 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 		}
 		return service().saveCareModel(delegate);
 	}
-
+	
 	@Override
 	public CareModel getByUniqueId(String uuidOrCode) {
 		if (uuidOrCode == null) {
@@ -72,19 +72,19 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 		}
 		return model;
 	}
-
+	
 	/** RESTWS dispatches requests containing q/patient/model/tab filters through search(). */
 	@Override
 	protected PageableResult doSearch(RequestContext context) throws ResponseException {
 		return doGetAll(context);
 	}
-
+	
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		String q = trimToNull(context.getParameter("q"));
 		String statusParam = trimToNull(context.getParameter("status"));
 		boolean includeRetired = Boolean.parseBoolean(context.getParameter("includeRetired"));
-
+		
 		CareModelStatus status = null;
 		if (statusParam != null) {
 			status = CareModelStatus.valueOf(statusParam);
@@ -94,17 +94,17 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 		long total = service().getCareModelsCount(q, status, includeRetired);
 		return new AlreadyPaged<CareModel>(context, models, (long) context.getStartIndex() + models.size() < total, total);
 	}
-
+	
 	@Override
 	protected void delete(CareModel delegate, String reason, RequestContext context) throws ResponseException {
 		service().retireCareModel(delegate, reason != null ? reason : "Retired through registry");
 	}
-
+	
 	@Override
 	public void purge(CareModel delegate, RequestContext context) throws ResponseException {
 		service().purgeCareModel(delegate);
 	}
-
+	
 	@Override
 	public DelegatingResourceDescription getUpdatableProperties() {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
@@ -113,7 +113,7 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 		description.addProperty("privilege");
 		return description;
 	}
-
+	
 	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
@@ -127,15 +127,15 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 		description.addProperty("retired");
 		return description;
 	}
-
+	
 	// No configuration exposure on purpose: the envelope only travels through the
 	// envelope/operation resources.
-
+	
 	@Override
 	public String getResourceVersion() {
 		return "1.0";
 	}
-
+	
 	private static String trimToNull(String value) {
 		if (value == null) {
 			return null;

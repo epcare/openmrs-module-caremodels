@@ -28,16 +28,16 @@ import org.openmrs.module.webservices.rest.web.response.ResponseException;
  */
 @Resource(name = RestConstants.VERSION_1 + "/caremodels/membershipoperation", supportedClass = MembershipOperationRequest.class, supportedOpenmrsVersions = { "1.8 - 9.0.*" })
 public class MembershipOperationResource extends DelegatingCrudResource<MembershipOperationRequest> {
-
+	
 	protected CareModelEnrollmentService service() {
 		return Context.getService(CareModelEnrollmentService.class);
 	}
-
+	
 	@Override
 	public MembershipOperationRequest newDelegate() {
 		return new MembershipOperationRequest();
 	}
-
+	
 	@Override
 	public MembershipOperationRequest save(MembershipOperationRequest request) {
 		String operation = normalized(request.getOperation());
@@ -56,7 +56,7 @@ public class MembershipOperationResource extends DelegatingCrudResource<Membersh
 				throw new IllegalArgumentException("Unknown membership operation: " + operation);
 		}
 	}
-
+	
 	private MemberStatus statusFor(String transition) {
 		String value = normalized(transition).toUpperCase(Locale.ENGLISH);
 		switch (value) {
@@ -72,7 +72,7 @@ public class MembershipOperationResource extends DelegatingCrudResource<Membersh
 				throw new IllegalArgumentException("Unknown membership transition: " + value);
 		}
 	}
-
+	
 	private MembershipOperationRequest resultOf(CareModelMember member) {
 		MembershipOperationRequest result = new MembershipOperationRequest();
 		result.setMemberUuid(member.getUuid());
@@ -83,28 +83,28 @@ public class MembershipOperationResource extends DelegatingCrudResource<Membersh
 		result.setEnrollmentSource(member.getEnrollmentSource());
 		return result;
 	}
-
+	
 	@Override
 	public MembershipOperationRequest getByUniqueId(String uniqueId) {
 		throw new ObjectNotFoundException();
 	}
-
+	
 	@Override
 	protected void delete(MembershipOperationRequest delegate, String reason, RequestContext context)
 	        throws ResponseException {
 		throw new UnsupportedOperationException("Delete is not supported for membershipoperation");
 	}
-
+	
 	@Override
 	public void purge(MembershipOperationRequest delegate, RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("Purge is not supported for membershipoperation");
 	}
-
+	
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("List is not supported for membershipoperation");
 	}
-
+	
 	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
@@ -121,12 +121,12 @@ public class MembershipOperationResource extends DelegatingCrudResource<Membersh
 		description.addProperty("enrollmentSource");
 		return description;
 	}
-
+	
 	@Override
 	public String getResourceVersion() {
 		return "1.0";
 	}
-
+	
 	private static String normalized(String value) {
 		return value == null ? "" : value.trim();
 	}

@@ -18,22 +18,22 @@ import org.openmrs.api.context.Context;
 
 /** Actual encounter records, not observations masquerading as encounters. */
 public class EncounterResolver implements DataResolver {
-
+	
 	@Override
 	public String getId() {
 		return "encounter-query";
 	}
-
+	
 	@Override
 	public String getReferenceKind() {
 		return "encounterTypes";
 	}
-
+	
 	@Override
 	public String getReferenceField() {
 		return "encounterTypeAlias";
 	}
-
+	
 	@Override public JsonNode resolve(Integer patientId, JsonNode source, String reference) {
         Patient patient = ResolverSupport.patient(patientId);
         EncounterType type = reference == null ? null : Context.getEncounterService().getEncounterTypeByUuid(reference);

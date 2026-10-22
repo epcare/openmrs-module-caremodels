@@ -16,11 +16,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class EnrollmentTriggerMatcherTest {
-
+	
 	private final ObjectMapper mapper = new ObjectMapper();
-
+	
 	private final EnrollmentTriggerMatcher matcher = new EnrollmentTriggerMatcher();
-
+	
 	@Test
 	public void shouldMatchSpecificAliasResolvedToEventReferenceUuid() throws Exception {
 		JsonNode definition = definition(true, "[{\"type\":\"OBSERVATION_SAVED\",\"conceptAlias\":\"blood_pressure\"}]");
@@ -28,7 +28,7 @@ public class EnrollmentTriggerMatcherTest {
 		assertFalse(matcher.matches(definition, event(ClinicalChangeEvent.TriggerType.OBSERVATION_CHANGED, "concept-uuid")));
 		assertFalse(matcher.matches(definition, event(ClinicalChangeEvent.TriggerType.OBSERVATION_SAVED, "other")));
 	}
-
+	
 	@Test
 	public void shouldMatchGenericAliasForProgramAndEncounterTriggers() throws Exception {
 		JsonNode program = definition(true, "[{\"type\":\"PROGRAM_CHANGED\",\"alias\":\"hiv\"}]");
@@ -36,30 +36,30 @@ public class EnrollmentTriggerMatcherTest {
 		assertTrue(matcher.matches(program, event(ClinicalChangeEvent.TriggerType.PROGRAM_CHANGED, "program-uuid")));
 		assertTrue(matcher.matches(encounter, event(ClinicalChangeEvent.TriggerType.ENCOUNTER_VOIDED, "encounter-uuid")));
 	}
-
+	
 	@Test
 	public void shouldIgnoreTriggersWhenEnrollmentIsDisabled() throws Exception {
 		JsonNode definition = definition(false, "[{\"type\":\"OBSERVATION_SAVED\",\"conceptAlias\":\"blood_pressure\"}]");
 		assertFalse(matcher.matches(definition, event(ClinicalChangeEvent.TriggerType.OBSERVATION_SAVED, "concept-uuid")));
 	}
-
+	
 	@Test
 	public void shouldTreatTypeOnlyTriggerAsWildcardForThatClinicalResource() throws Exception {
 		JsonNode definition = definition(true, "[{\"type\":\"ENCOUNTER_SAVED\"}]");
 		assertTrue(matcher.matches(definition, event(ClinicalChangeEvent.TriggerType.ENCOUNTER_SAVED, "any-type")));
 		assertFalse(matcher.matches(definition, event(ClinicalChangeEvent.TriggerType.ENCOUNTER_CHANGED, "any-type")));
 	}
-
+	
 	private JsonNode definition(boolean enabled, String triggers) throws Exception {
 		return mapper.readTree("{\"terminology\":{\"concepts\":{\"blood_pressure\":\"concept-uuid\"},"
 		        + "\"programs\":{\"hiv\":\"program-uuid\"},\"encounterTypes\":{\"visit\":\"encounter-uuid\"}},"
 		        + "\"enrollment\":{\"enabled\":" + enabled + ",\"triggers\":" + triggers + "}}");
 	}
-
+	
 	private ClinicalChangeEvent event(ClinicalChangeEvent.TriggerType type, String referenceUuid) {
 		return new ClinicalChangeEvent(type, "patient", "source", referenceUuid, new Date());
 	}
-
+	
 	@org.junit.Test
 	public void correctionMustMatchTheOriginalSaveSubscriptionAndRejectUnknownAliases() throws Exception {
 		com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();

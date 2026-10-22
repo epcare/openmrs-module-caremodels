@@ -19,12 +19,12 @@ import org.openmrs.parameter.OrderSearchCriteriaBuilder;
 
 /** Recorded order history for exactly one declared concept. Not a complete current regimen. */
 public class OrderResolver implements DataResolver {
-
+	
 	@Override
 	public String getId() {
 		return "order-query";
 	}
-
+	
 	@Override public JsonNode resolve(Integer patientId, JsonNode source, String reference) {
         Patient patient = ResolverSupport.patient(patientId);
         Concept concept = reference == null ? null : Context.getConceptService().getConceptByUuid(reference);

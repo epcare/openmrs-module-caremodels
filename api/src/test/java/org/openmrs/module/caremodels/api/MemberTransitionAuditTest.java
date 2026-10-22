@@ -12,7 +12,7 @@ import org.openmrs.test.BaseModuleContextSensitiveTest;
 import static org.junit.Assert.*;
 
 public class MemberTransitionAuditTest extends BaseModuleContextSensitiveTest {
-
+	
 	@Test
 	public void transitionMustBeAuditedIdempotentAndNeverReopenClosedEpisodes() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();

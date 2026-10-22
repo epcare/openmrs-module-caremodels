@@ -14,25 +14,25 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 public class RuleExpressionEvaluatorTest {
-
+	
 	private static final long DAY_MILLIS = 24L * 60L * 60L * 1000L;
-
+	
 	private final Date asOf = new Date(10 * DAY_MILLIS);
-
+	
 	private final Map<String, RuleEvidence> evidence = new HashMap<String, RuleEvidence>();
-
+	
 	private ObjectMapper mapper;
-
+	
 	private RuleExpressionEvaluator evaluator;
-
+	
 	private RuleEvidenceProvider provider;
-
+	
 	@Before
 	public void setup() {
 		mapper = new ObjectMapper();
 		evaluator = new RuleExpressionEvaluator();
 		provider = new RuleEvidenceProvider() {
-
+			
 			@Override
 			public RuleEvidence resolve(String type, String alias) {
 				RuleEvidence resolved = evidence.get(type + ":" + alias);
@@ -40,21 +40,21 @@ public class RuleExpressionEvaluatorTest {
 			}
 		};
 	}
-
+	
 	@Test
 	public void shouldPreserveUnknownThroughNestedExpressions() throws Exception {
 		JsonNode expression = json("{\"all\":[{\"literal\":\"TRUE\"},{\"not\":{\"type\":\"observation\","
 		        + "\"operator\":\"EQUALS\",\"alias\":\"missing\",\"value\":1}}]}");
 		assertEquals(TriState.UNKNOWN, evaluator.evaluate(expression, provider, asOf));
 	}
-
+	
 	@Test
 	public void falseShouldShortCircuitUnknownInAll() throws Exception {
 		JsonNode expression = json("{\"all\":[{\"type\":\"observation\",\"operator\":\"EXISTS\","
 		        + "\"alias\":\"missing\"},{\"literal\":\"FALSE\"}]}");
 		assertEquals(TriState.FALSE, evaluator.evaluate(expression, provider, asOf));
 	}
-
+	
 	@Test
 	public void shouldDistinguishKnownAbsenceFromUnknown() throws Exception {
 		evidence.put("observation:weight", RuleEvidence.absent());
@@ -65,7 +65,7 @@ public class RuleExpressionEvaluatorTest {
 		assertEquals(TriState.UNKNOWN, evaluator.evaluate(
 		    json("{\"type\":\"observation\",\"operator\":\"EXISTS\",\"alias\":\"missing\"}"), provider, asOf));
 	}
-
+	
 	@Test
 	public void shouldEvaluateNumericComparisonAndUnits() throws Exception {
 		evidence.put("observation:bp", RuleEvidence.present(145, asOf, "mmHg"));
@@ -79,7 +79,7 @@ public class RuleExpressionEvaluatorTest {
 		        + "\"operator\":\"GREATER_OR_EQUAL\",\"alias\":\"bp\",\"value\":140,\"unit\":\"mmHg\","
 		        + "\"windowDays\":90}"), provider, asOf));
 	}
-
+	
 	@Test
 	public void shouldEvaluateCodedAliasAndProgramState() throws Exception {
 		evidence.put("observation:status", RuleEvidence.present("positive"));
@@ -91,7 +91,7 @@ public class RuleExpressionEvaluatorTest {
 		    evaluator.evaluate(json("{\"type\":\"program\",\"operator\":\"STATE_EQUALS\",\"alias\":\"hiv\","
 		            + "\"value\":\"ON_ART\"}"), provider, asOf));
 	}
-
+	
 	@Test
 	public void shouldEvaluateWindowsAgainstSuppliedClock() throws Exception {
 		evidence.put("encounter:visit", RuleEvidence.present("visit", new Date(asOf.getTime() - 5 * DAY_MILLIS), null));
@@ -105,11 +105,11 @@ public class RuleExpressionEvaluatorTest {
 		    json("{\"type\":\"encounter\",\"operator\":\"WITHIN_WINDOW\",\"alias\":\"visit\","
 		            + "\"value\":true,\"windowDays\":7}"), provider, null));
 	}
-
+	
 	@Test
 	public void providerFailureShouldFailClosedAsUnknown() throws Exception {
 		RuleEvidenceProvider failing = new RuleEvidenceProvider() {
-
+			
 			@Override
 			public RuleEvidence resolve(String type, String alias) {
 				throw new IllegalStateException("lookup failed");
@@ -118,11 +118,11 @@ public class RuleExpressionEvaluatorTest {
 		assertEquals(TriState.UNKNOWN,
 		    evaluator.evaluate(json("{\"type\":\"observation\",\"operator\":\"EXISTS\",\"alias\":\"x\"}"), failing, asOf));
 	}
-
+	
 	private JsonNode json(String value) throws Exception {
 		return mapper.readTree(value);
 	}
-
+	
 	@Test
 	public void mismatchedTypesAndNonFiniteNumbersMustRemainUnknown() throws Exception {
 		for (Object value : new Object[] { "50", "<50", Double.NaN, Double.POSITIVE_INFINITY }) {

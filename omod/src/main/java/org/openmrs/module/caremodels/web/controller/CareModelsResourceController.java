@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/rest/" + RestConstants.VERSION_1 + "/caremodels")
 public class CareModelsResourceController extends MainResourceController {
-
+	
 	@Override
 	public String getNamespace() {
 		return RestConstants.VERSION_1 + "/caremodels";

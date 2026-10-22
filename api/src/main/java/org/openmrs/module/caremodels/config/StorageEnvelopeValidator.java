@@ -13,10 +13,10 @@ import org.openmrs.module.caremodels.config.StorageEnvelope.PublishedSnapshot;
 
 /** Validates integrity guarantees that JSON Schema cannot express. */
 public final class StorageEnvelopeValidator {
-
+	
 	private StorageEnvelopeValidator() {
 	}
-
+	
 	public static ValidationResult validate(StorageEnvelope envelope) {
 		ValidationResult result = ValidationResult.valid();
 		Set<String> versions = new HashSet<String>();
@@ -40,7 +40,7 @@ public final class StorageEnvelopeValidator {
 		}
 		return result;
 	}
-
+	
 	private static void validateSnapshot(PublishedSnapshot snapshot, String path, Set<String> versions,
 	        ValidationResult result) {
 		if (snapshot == null) {

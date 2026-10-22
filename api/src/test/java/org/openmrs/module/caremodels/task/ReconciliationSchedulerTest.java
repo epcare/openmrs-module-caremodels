@@ -8,7 +8,7 @@ import org.openmrs.module.caremodels.CareModelsActivator;
 import static org.mockito.Mockito.*;
 
 public class ReconciliationSchedulerTest {
-
+	
 	@Test
     public void moduleRestartMustResumeExistingEnabledTaskWithoutReplacingItsSettings() throws Exception {
         SchedulerService scheduler = mock(SchedulerService.class);
@@ -25,7 +25,7 @@ public class ReconciliationSchedulerTest {
             verify(scheduler).shutdownTask(task);
         }
     }
-
+	
 	@Test
     public void moduleStartMustRespectAdministrativelyDisabledTask() {
         SchedulerService scheduler = mock(SchedulerService.class);

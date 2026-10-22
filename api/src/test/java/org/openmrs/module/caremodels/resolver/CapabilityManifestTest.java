@@ -6,7 +6,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class CapabilityManifestTest {
-
+	
 	@Test public void releaseManifestMustListOnlyExecutableResolversAndExactly25CatalogEntries() throws Exception {
         JsonNode manifest = new ObjectMapper().readTree(getClass().getResourceAsStream("/widget-capabilities.json"));
         Set<String> resolvers = new HashSet<>();

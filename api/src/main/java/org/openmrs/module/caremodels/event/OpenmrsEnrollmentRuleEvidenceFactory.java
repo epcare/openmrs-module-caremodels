@@ -34,46 +34,46 @@ import org.openmrs.module.caremodels.rule.RuleEvidenceProvider;
 
 /** Builds fail-closed rule evidence from OpenMRS clinical services. */
 public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvidenceFactory {
-
+	
 	private CareModelDAO careModelDAO;
-
+	
 	private CareModelMemberDAO memberDAO;
-
+	
 	public void setCareModelDAO(CareModelDAO careModelDAO) {
 		this.careModelDAO = careModelDAO;
 	}
-
+	
 	public void setMemberDAO(CareModelMemberDAO memberDAO) {
 		this.memberDAO = memberDAO;
 	}
-
+	
 	@Override
 	public Integer resolvePatientId(String patientUuid) {
 		Patient patient = Context.getPatientService().getPatientByUuid(patientUuid);
 		return patient == null || Boolean.TRUE.equals(patient.getVoided()) ? null : patient.getPatientId();
 	}
-
+	
 	@Override
 	public RuleEvidenceProvider create(Integer patientId, JsonNode definition, Date asOf) {
 		return new Provider(patientId, definition, asOf == null ? new Date() : new Date(asOf.getTime()));
 	}
-
+	
 	private final class Provider implements RuleEvidenceProvider {
-
+		
 		private final Integer patientId;
-
+		
 		private final JsonNode definition;
-
+		
 		private final Date asOf;
-
+		
 		private final Map<String, RuleEvidence> cache = new HashMap<String, RuleEvidence>();
-
+		
 		private Provider(Integer patientId, JsonNode definition, Date asOf) {
 			this.patientId = patientId;
 			this.definition = definition;
 			this.asOf = asOf;
 		}
-
+		
 		@Override
 		public RuleEvidence resolve(String type, String alias) {
 			if (type == null || alias == null || alias.trim().isEmpty()) {
@@ -88,7 +88,7 @@ public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvide
 			cache.put(key, resolved);
 			return resolved;
 		}
-
+		
 		private RuleEvidence resolveUncached(String type, String alias) {
 			if ("observation".equals(type)) {
 				return observation(alias);
@@ -104,7 +104,7 @@ public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvide
 			}
 			return RuleEvidence.unknown();
 		}
-
+		
 		private RuleEvidence observation(String alias) {
 			String conceptUuid = terminologyUuid("concepts", alias);
 			Concept concept = conceptUuid == null ? null : Context.getConceptService().getConceptByUuid(conceptUuid);
@@ -128,7 +128,7 @@ public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvide
 			return RuleEvidence.present(observationValue(observation), observation.getObsDatetime(), numeric == null ? null
 			        : numeric.getUnits());
 		}
-
+		
 		private RuleEvidence encounter(String alias) {
 			String typeUuid = terminologyUuid("encounterTypes", alias);
 			EncounterType type = typeUuid == null ? null : Context.getEncounterService().getEncounterTypeByUuid(typeUuid);
@@ -153,7 +153,7 @@ public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvide
 			return latest == null ? RuleEvidence.absent() : RuleEvidence.present(latest.getUuid(),
 			    latest.getEncounterDatetime(), null);
 		}
-
+		
 		private RuleEvidence program(String alias) {
 			String programUuid = terminologyUuid("programs", alias);
 			Program program = programUuid == null ? null : Context.getProgramWorkflowService().getProgramByUuid(programUuid);
@@ -173,7 +173,7 @@ public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvide
 			Date effective = state == null ? latest.getDateEnrolled() : state.getStartDate();
 			return RuleEvidence.present(value, effective, null);
 		}
-
+		
 		private RuleEvidence enrollment(String modelCode) {
 			CareModel model = careModelDAO.getCareModelByCode(modelCode);
 			if (model == null || Boolean.TRUE.equals(model.getRetired())) {
@@ -183,7 +183,7 @@ public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvide
 			return member == null ? RuleEvidence.absent() : RuleEvidence.present(member.getStatus().name(),
 			    member.getDateEnrolled(), null);
 		}
-
+		
 		private Object observationValue(Obs observation) {
 			if (observation.getValueNumeric() != null) {
 				String modifier = observation.getValueModifier();
@@ -205,12 +205,12 @@ public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvide
 			}
 			return null;
 		}
-
+		
 		private String terminologyUuid(String kind, String alias) {
 			JsonNode value = definition.path("terminology").path(kind).get(alias);
 			return value == null || !value.isTextual() ? null : value.asText();
 		}
-
+		
 		private String codedAlias(Concept concept) {
 			if (concept == null || concept.getUuid() == null) {
 				return null;
@@ -225,7 +225,7 @@ public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvide
 			}
 			return concept.getUuid();
 		}
-
+		
 		private PatientProgram latestProgram(List<PatientProgram> programs) {
 			PatientProgram latest = null;
 			for (PatientProgram candidate : programs) {
@@ -240,7 +240,7 @@ public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvide
 			}
 			return latest;
 		}
-
+		
 		private PatientState latestState(Set<PatientState> states) {
 			PatientState latest = null;
 			for (PatientState candidate : states) {
@@ -255,7 +255,7 @@ public class OpenmrsEnrollmentRuleEvidenceFactory implements EnrollmentRuleEvide
 			}
 			return latest;
 		}
-
+		
 		private boolean later(Date candidate, String candidateUuid, Date current, String currentUuid) {
 			return candidate != null
 			        && (current == null || candidate.after(current) || (candidate.equals(current) && candidateUuid != null && (currentUuid == null || candidateUuid

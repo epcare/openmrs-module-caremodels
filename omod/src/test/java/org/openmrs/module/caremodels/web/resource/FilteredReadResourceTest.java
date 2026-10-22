@@ -17,30 +17,30 @@ import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
 public class FilteredReadResourceTest {
-
+	
 	private MockedStatic<Context> context;
-
+	
 	private CareModelAccessService access;
-
+	
 	@Before public void setup() {
         context = mockStatic(Context.class);
         access = mock(CareModelAccessService.class);
         context.when(() -> Context.getService(CareModelAccessService.class)).thenReturn(access);
     }
-
+	
 	@After
 	public void cleanup() {
 		if (context != null)
 			context.close();
 	}
-
+	
 	private RequestContext request() {
 		RequestContext request = mock(RequestContext.class);
 		when(request.getStartIndex()).thenReturn(0);
 		when(request.getLimit()).thenReturn(10);
 		return request;
 	}
-
+	
 	@Test public void filteredMembershipSearchMustCallTheAuthorizedMetadataService() {
         RequestContext request = request(); when(request.getParameter("patient")).thenReturn("patient");
         CareModelMembershipDTO member = new CareModelMembershipDTO(); member.setMemberUuid("member");
@@ -50,7 +50,7 @@ public class FilteredReadResourceTest {
         verify(access).getAuthorizedMemberships("patient");
         context.verify(Context::getObsService, never());
     }
-
+	
 	@Test public void filteredWorkspaceSearchMustPreserveSelectedTabAndDescriptors() throws Exception {
         RequestContext request = request(); when(request.getParameter("patient")).thenReturn("patient");
         when(request.getParameter("model")).thenReturn("model"); when(request.getParameter("tab")).thenReturn("overview");
@@ -65,7 +65,7 @@ public class FilteredReadResourceTest {
         verify(access).authorizeWorkspace("patient", "model", "overview");
         context.verify(Context::getObsService, never());
     }
-
+	
 	@Test public void registrySearchMustNotDoublePageAnAlreadyPagedCollection() {
         RequestContext request = request(); when(request.getStartIndex()).thenReturn(10);
         when(request.getParameter("q")).thenReturn(" HIV "); when(request.getParameter("status")).thenReturn("PUBLISHED");
@@ -77,7 +77,7 @@ public class FilteredReadResourceTest {
         AlreadyPaged<?> result = (AlreadyPaged<?>)new ModelResource().doSearch(request);
         assertSame(model, result.getPageOfResults().get(0)); assertTrue(result.hasMoreResults()); assertEquals(Long.valueOf(21), result.getTotalCount());
     }
-
+	
 	@Test(expected = APIException.class)
 	public void filteredWorkspaceSearchMustNotBypassDenials() {
 		RequestContext request = request();
@@ -86,7 +86,7 @@ public class FilteredReadResourceTest {
 		when(access.authorizeWorkspace("patient", "model", null)).thenThrow(new APIException("denied"));
 		new WorkspaceResource().doSearch(request);
 	}
-
+	
 	@Test public void metadataUpdatesMustNotWriteLifecycleOrEnvelopeFields() {
         assertEquals(new HashSet<>(Arrays.asList("name", "description", "privilege")), new ModelResource().getUpdatableProperties().getProperties().keySet());
     }

@@ -6,7 +6,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ClinicalEventLoggingTest {
-
+	
 	@Test public void listenerFailuresMustNotLogPatientSourceOrExceptionDetails() {
         Logger logger = Logger.getLogger(ClinicalChangePublisher.class.getName());
         List<LogRecord> records = new ArrayList<>();

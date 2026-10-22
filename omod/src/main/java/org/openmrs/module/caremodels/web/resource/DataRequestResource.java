@@ -35,13 +35,13 @@ import org.openmrs.module.webservices.rest.web.response.ResponseException;
  */
 @Resource(name = RestConstants.VERSION_1 + "/caremodels/data", supportedClass = DataRequestResult.class, supportedOpenmrsVersions = { "1.8 - 9.0.*" })
 public class DataRequestResource extends DelegatingCrudResource<DataRequestResult> {
-
+	
 	private final DataResolverRegistry resolvers;
-
+	
 	public DataRequestResource() {
 		this(sharedRegistry());
 	}
-
+	
 	private static DataResolverRegistry sharedRegistry() {
 		DataResolverRegistry registry = Context.getRegisteredComponent("caremodels.DataResolverRegistry",
 		    DataResolverRegistry.class);
@@ -49,33 +49,33 @@ public class DataRequestResource extends DelegatingCrudResource<DataRequestResul
 			throw new APIException("Resolver registry is unavailable");
 		return registry;
 	}
-
+	
 	public DataRequestResource(DataResolverRegistry resolvers) {
 		this.resolvers = resolvers;
 	}
-
+	
 	@Override
 	public DataRequestResult newDelegate() {
 		return new DataRequestResult();
 	}
-
+	
 	@Override
 	public DataRequestResult save(DataRequestResult request) {
 		if (request.getPatient() == null || request.getModel() == null || request.getTab() == null
 		        || request.getDataSource() == null) {
 			throw new IllegalArgumentException("patient, model, tab and dataSource are required");
 		}
-
+		
 		// 1. full authorization chain, fresh on every request
 		AuthorizedAccess access = Context.getService(CareModelAccessService.class).authorizeWorkspace(request.getPatient(),
 		    request.getModel(), request.getTab());
-
+		
 		// 2. the requested source must be declared on a widget of THIS visible tab
 		JsonNode source = findDeclaredSource(access, request.getDataSource());
 		if (source == null) {
 			throw new APIException("Data source is not declared in the requested tab");
 		}
-
+		
 		// 3. validate the stored source, resolve its typed resource alias and invoke registered code
 		org.openmrs.module.caremodels.config.ValidationResult validation = org.openmrs.module.caremodels.resolver.SourceContract
 		        .validate(source, resolvers, "$.dataSource");
@@ -91,16 +91,16 @@ public class DataRequestResource extends DelegatingCrudResource<DataRequestResul
 		        .path(source.path(resolver.getReferenceField()).asText()).asText(null);
 		if (resolver.getReferenceKind() != null && referenceUuid == null)
 			throw new APIException("Resource alias is unavailable");
-
+		
 		JsonNode result = resolvers.resolve(resolverId, patientIdFor(access.getPatientUuid()), source, referenceUuid);
-
+		
 		DataRequestResult response = new DataRequestResult();
 		response.setModelCode(access.getModelCode());
 		response.setMemberUuid(access.getMemberUuid());
 		response.setResultJson(result.toString());
 		return response;
 	}
-
+	
 	private JsonNode findDeclaredSource(AuthorizedAccess access, String dataSourceKey) {
 		JsonNode dataSources = access.getPublishedDefinition().path("dataSources");
 		if (!dataSources.has(dataSourceKey)) {
@@ -119,34 +119,34 @@ public class DataRequestResource extends DelegatingCrudResource<DataRequestResul
 		}
 		return null;
 	}
-
+	
 	private Integer patientIdFor(String patientUuid) {
 		org.openmrs.Patient patient = Context.getPatientService().getPatientByUuid(patientUuid);
 		if (patient == null || Boolean.TRUE.equals(patient.getVoided()))
 			throw new APIException("Patient unavailable");
 		return patient.getPatientId();
 	}
-
+	
 	@Override
 	public DataRequestResult getByUniqueId(String uniqueId) {
 		throw new ObjectNotFoundException();
 	}
-
+	
 	@Override
 	protected void delete(DataRequestResult delegate, String reason, RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("Delete is not supported for data");
 	}
-
+	
 	@Override
 	public void purge(DataRequestResult delegate, RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("Purge is not supported for data");
 	}
-
+	
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("List is not supported for data; use POST");
 	}
-
+	
 	@Override
 	public DelegatingResourceDescription getCreatableProperties() {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
@@ -156,7 +156,7 @@ public class DataRequestResource extends DelegatingCrudResource<DataRequestResul
 		description.addRequiredProperty("dataSource");
 		return description;
 	}
-
+	
 	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
@@ -169,12 +169,12 @@ public class DataRequestResource extends DelegatingCrudResource<DataRequestResul
 		description.addProperty("resultJson");
 		return description;
 	}
-
+	
 	@Override
 	public String getResourceVersion() {
 		return "1.0";
 	}
-
+	
 	private static String trimToNull(String value) {
 		if (value == null) {
 			return null;

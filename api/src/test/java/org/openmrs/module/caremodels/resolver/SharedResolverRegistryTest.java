@@ -10,9 +10,9 @@ import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
 public class SharedResolverRegistryTest {
-
+	
 	private final ObjectMapper mapper = new ObjectMapper();
-
+	
 	private VersionedDataResolver extension() throws Exception {
 		VersionedDataResolver extension = mock(VersionedDataResolver.class);
 		when(extension.getId()).thenReturn("test-counter");
@@ -27,12 +27,12 @@ public class SharedResolverRegistryTest {
 		    mapper.readTree("{\"type\":\"test-counter\",\"value\":1}"));
 		return extension;
 	}
-
+	
 	private JsonNode source() throws Exception {
 		return mapper
 		        .readTree("{\"type\":\"registered\",\"resolverId\":\"test-counter\",\"resolverVersion\":\"2.0.0\",\"resultType\":\"NUMBER\"}");
 	}
-
+	
 	@Test
 	public void validatorAndRuntimeMustUseTheSameExplicitlyRegisteredVersionedCode() throws Exception {
 		DataResolverRegistry registry = new DataResolverRegistry();
@@ -46,7 +46,7 @@ public class SharedResolverRegistryTest {
 		        .readTree("{\"type\":\"registered\",\"resolverId\":\"test-counter\",\"resolverVersion\":\"3.0.0\",\"resultType\":\"NUMBER\"}");
 		assertFalse(SourceContract.validate(wrong, registry, "$.source").isValid());
 	}
-
+	
 	@Test
 	public void malformedResultsMustFailAndBeCountedWithoutCachingPatientData() throws Exception {
 		DataResolverRegistry registry = new DataResolverRegistry();
@@ -61,7 +61,7 @@ public class SharedResolverRegistryTest {
 		catch (IllegalArgumentException expected) {}
 		assertEquals(Long.valueOf(1), registry.getMetrics("test-counter").get("failures"));
 	}
-
+	
 	@Test
 	public void productionExecutionMustApplyReadOnlyTenSecondTransactionDeadline() throws Exception {
 		DataResolverRegistry registry = new DataResolverRegistry();
@@ -78,7 +78,7 @@ public class SharedResolverRegistryTest {
 		assertTrue(definition.getValue().isReadOnly());
 		verify(transactions).commit(status);
 	}
-
+	
 	@Test(expected = IllegalArgumentException.class)
 	public void extensionMustNeverSilentlyReplaceABuiltinResolver() throws Exception {
 		DataResolverRegistry registry = new DataResolverRegistry();

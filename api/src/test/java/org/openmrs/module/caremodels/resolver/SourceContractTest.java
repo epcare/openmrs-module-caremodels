@@ -5,15 +5,15 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class SourceContractTest {
-
+	
 	private final ObjectMapper mapper = new ObjectMapper();
-
+	
 	private final DataResolverRegistry registry = new DataResolverRegistry();
-
+	
 	private boolean valid(String json) throws Exception {
 		return SourceContract.validate(mapper.readTree(json), registry, "$.source").isValid();
 	}
-
+	
 	@Test
 	public void supportedSourcesShouldRequireExactReferencesAndOptions() throws Exception {
 		assertTrue(valid("{\"type\":\"encounter-query\",\"encounterTypeAlias\":\"review\",\"resultType\":\"TABLE\"}"));
@@ -22,7 +22,7 @@ public class SourceContractTest {
 		assertFalse(valid("{\"type\":\"program-state\",\"programAlias\":\"hiv\",\"conceptAlias\":\"wrong\",\"resultType\":\"TABLE\"}"));
 		assertFalse(valid("{\"type\":\"latest-observation\",\"conceptAlias\":\"weight\",\"resultType\":\"NUMBER\",\"maxResults\":\"100\"}"));
 	}
-
+	
 	@Test
 	public void unknownRegisteredMethodsAndVersionsMustStayUnavailable() throws Exception {
 		assertFalse(valid("{\"type\":\"registered\",\"resolverId\":\"risk-score\",\"resolverVersion\":\"1.0.0\",\"resultType\":\"NUMBER\"}"));

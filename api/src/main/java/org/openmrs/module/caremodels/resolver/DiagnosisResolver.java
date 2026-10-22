@@ -18,22 +18,22 @@ import org.openmrs.api.context.Context;
 
 /** Encounter diagnoses with certainty and encounter provenance, separate from conditions. */
 public class DiagnosisResolver implements DataResolver {
-
+	
 	@Override
 	public String getId() {
 		return "encounter-diagnoses";
 	}
-
+	
 	@Override
 	public String getReferenceKind() {
 		return null;
 	}
-
+	
 	@Override
 	public String getReferenceField() {
 		return null;
 	}
-
+	
 	@Override public JsonNode resolve(Integer patientId, JsonNode source, String unused) {
         Patient patient = ResolverSupport.patient(patientId);
         Instant now = Instant.now();

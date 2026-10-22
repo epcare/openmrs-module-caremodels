@@ -16,11 +16,11 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class StaticWidgetTest {
-
+	
 	private final ObjectMapper mapper = new ObjectMapper();
-
+	
 	private final JsonSchemaValidator validator = new JsonSchemaValidator();
-
+	
 	private ObjectNode definition(String type, String properties) throws Exception {
 		ObjectNode definition = (ObjectNode) mapper.readTree(Fixtures.sample("minimal-model"));
 		ArrayNode widgets = (ArrayNode) definition.path("workspace").path("tabs").get(0).path("widgets");
@@ -29,11 +29,11 @@ public class StaticWidgetTest {
 		widget.set("properties", mapper.readTree(properties));
 		return definition;
 	}
-
+	
 	private boolean valid(ObjectNode definition) {
 		return validator.validate(definition, JsonSchemaValidator.SchemaType.MODEL_DEFINITION).isValid();
 	}
-
+	
 	@Test
 	public void shouldAcceptStaticWidgetsWithoutSources() throws Exception {
 		assertTrue(valid(definition("text-note", "{\"text\":\"Plain note\"}")));
@@ -42,7 +42,7 @@ public class StaticWidgetTest {
 		assertTrue(valid(definition("spacer", "{\"size\":\"small\"}")));
 		assertTrue(valid(definition("static-callout", "{\"text\":\"Static guidance\",\"tone\":\"info\"}")));
 	}
-
+	
 	@Test
 	public void shouldRejectExecutableUnknownAndInvalidProperties() throws Exception {
 		assertFalse(valid(definition("text-note", "{\"text\":\"Note\",\"onClick\":\"execute\"}")));
@@ -53,7 +53,7 @@ public class StaticWidgetTest {
 		((ObjectNode) definition.path("workspace").path("tabs").get(0).path("widgets").get(0)).put("dataSource", "secret");
 		assertFalse(valid(definition));
 	}
-
+	
 	@Test
 	public void shouldPreserveAllExistingFixtures() throws Exception {
 		for (String name : new String[] { "minimal-model", "hiv-model", "ncd-model", "anc-model" }) {

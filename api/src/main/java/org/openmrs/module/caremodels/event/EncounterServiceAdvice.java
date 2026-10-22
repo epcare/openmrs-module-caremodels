@@ -11,14 +11,14 @@ import org.openmrs.Encounter;
 
 /** Converts successful encounter writes into transaction-aware clinical change events. */
 public class EncounterServiceAdvice extends ClinicalChangeAdviceSupport implements MethodInterceptor {
-
+	
 	public EncounterServiceAdvice() {
 	}
-
+	
 	EncounterServiceAdvice(ClinicalChangePublisher publisher) {
 		super(publisher);
 	}
-
+	
 	@Override
 	public Object invoke(MethodInvocation invocation) throws Throwable {
 		String method = invocation.getMethod().getName();
@@ -34,12 +34,12 @@ public class EncounterServiceAdvice extends ClinicalChangeAdviceSupport implemen
 		}
 		return result;
 	}
-
+	
 	private Encounter firstArgument(MethodInvocation invocation) {
 		Object[] arguments = invocation.getArguments();
 		return arguments.length > 0 && arguments[0] instanceof Encounter ? (Encounter) arguments[0] : null;
 	}
-
+	
 	private ClinicalChangeEvent.TriggerType triggerType(String method, boolean newEncounter) {
 		if ("saveEncounter".equals(method)) {
 			return newEncounter ? ClinicalChangeEvent.TriggerType.ENCOUNTER_SAVED
