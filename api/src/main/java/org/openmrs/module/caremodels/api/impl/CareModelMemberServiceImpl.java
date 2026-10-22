@@ -15,6 +15,7 @@ import java.util.List;
 import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
+import org.openmrs.module.caremodels.api.CareModelEnrollmentService;
 import org.openmrs.module.caremodels.api.CareModelMemberService;
 import org.openmrs.module.caremodels.api.db.CareModelMemberDAO;
 import org.openmrs.module.caremodels.model.CareModelMember;
@@ -28,6 +29,8 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 	
 	private CareModelMemberDAO dao;
 	
+	private CareModelEnrollmentService enrollmentService;
+
 	public CareModelMemberDAO getDao() {
 		return dao;
 	}
@@ -36,6 +39,10 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 		this.dao = dao;
 	}
 	
+	public void setEnrollmentService(CareModelEnrollmentService enrollmentService) {
+		this.enrollmentService = enrollmentService;
+	}
+
 	@Override
 	@Transactional(readOnly = true)
 	public CareModelMember getMember(Integer careModelMemberId) throws APIException {
@@ -101,20 +108,10 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 	@Transactional
 	public CareModelMember transitionMember(CareModelMember member, MemberStatus newStatus, String reason, Date asOf)
 	        throws APIException {
-		if (reason == null || reason.trim().isEmpty()) {
-			throw new APIException("A reason is required for manual membership transitions");
+		if (member == null || member.getUuid() == null) {
+			throw new APIException("A persisted Care Model membership is required");
 		}
-		if (newStatus == null || newStatus == member.getStatus()) {
-			return member;
-		}
-		
-		// Append the transition to the membership history before flipping status so the episode
-		// record stays auditable. Full idempotency and provenance come with the enrollment engine.
-		if (newStatus == MemberStatus.COMPLETED || newStatus == MemberStatus.WITHDRAWN) {
-			member.setDateCompleted(asOf != null ? asOf : new Date());
-		}
-		member.setStatus(newStatus);
-		return dao.saveCareModelMember(member);
+		return enrollmentService.transitionEnrollment(member.getUuid(), newStatus, reason, asOf);
 	}
 	
 	@Override

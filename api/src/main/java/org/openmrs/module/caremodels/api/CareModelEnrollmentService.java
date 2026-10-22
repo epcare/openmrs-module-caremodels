@@ -15,6 +15,7 @@ import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
 import org.openmrs.api.OpenmrsService;
 import org.openmrs.module.caremodels.model.CareModelMember;
+import org.openmrs.module.caremodels.model.CareModelMember.MemberStatus;
 import org.openmrs.module.caremodels.rule.EnrollmentRuleEngine.Action;
 import org.openmrs.module.caremodels.security.CareModelsPrivileges;
 import org.springframework.transaction.annotation.Propagation;
@@ -42,4 +43,17 @@ public interface CareModelEnrollmentService extends OpenmrsService {
 	@Transactional
 	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
 	CareModelMember enrollManually(Integer patientId, Integer careModelId, String reason, Date asOf) throws APIException;
+
+	/**
+	 * Resolves stable external identifiers before applying the same guarded manual enrollment flow.
+	 */
+	@Transactional
+	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
+	CareModelMember enrollManually(String patientUuid, String modelCodeOrUuid, String reason, Date asOf) throws APIException;
+
+	/** Applies an audited lifecycle transition to an ACTIVE or SUSPENDED episode. */
+	@Transactional
+	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
+	CareModelMember transitionEnrollment(String memberUuid, MemberStatus newStatus, String reason, Date asOf)
+	        throws APIException;
 }

@@ -19,7 +19,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import org.openmrs.Patient;
 import org.openmrs.api.APIException;
+import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.module.caremodels.api.CareModelEnrollmentService;
 import org.openmrs.module.caremodels.api.db.CareModelDAO;
@@ -51,6 +53,8 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 
 	private EnrollmentActorProvider actorProvider = new OpenmrsEnrollmentActorProvider();
 
+	private EnrollmentCommandAuthorizer commandAuthorizer = new OpenmrsEnrollmentCommandAuthorizer();
+
 	public void setCareModelDAO(CareModelDAO careModelDAO) {
 		this.careModelDAO = careModelDAO;
 	}
@@ -65,6 +69,10 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 
 	public void setActorProvider(EnrollmentActorProvider actorProvider) {
 		this.actorProvider = actorProvider;
+	}
+
+	public void setCommandAuthorizer(EnrollmentCommandAuthorizer commandAuthorizer) {
+		this.commandAuthorizer = commandAuthorizer;
 	}
 
 	@Override
@@ -114,7 +122,8 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		assertText(memberUuid, "Membership UUID is required");
 		assertReason(reason);
 		CareModelMember member = getMember(memberUuid);
-		lockModel(member.getCareModelId());
+		PublishedModel published = lockModel(member.getCareModelId());
+		authorizeCommand(member.getPatientId(), published.model);
 		member = getMember(memberUuid);
 		if (member.getStatus() == MemberStatus.ACTIVE && SOURCE_CONFIRMATION.equals(member.getEnrollmentSource())) {
 			return member;
@@ -137,7 +146,8 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		assertText(memberUuid, "Membership UUID is required");
 		assertReason(reason);
 		CareModelMember member = getMember(memberUuid);
-		lockModel(member.getCareModelId());
+		PublishedModel published = lockModel(member.getCareModelId());
+		authorizeCommand(member.getPatientId(), published.model);
 		member = getMember(memberUuid);
 		if (member.getStatus() == MemberStatus.DECLINED) {
 			return member;
@@ -158,6 +168,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		assertIds(patientId, careModelId);
 		assertReason(reason);
 		PublishedModel published = lockModel(careModelId);
+		authorizeCommand(patientId, published.model);
 		JsonNode manual = published.definition.path("enrollment").path("manualEnrollment");
 		if (!manual.path("enabled").asBoolean(false)) {
 			throw new APIException("Manual enrollment is disabled for this Care Model");
@@ -180,6 +191,51 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		return memberDAO.saveCareModelMember(member);
 	}
 
+	@Override
+	@Transactional
+	public CareModelMember enrollManually(String patientUuid, String modelCodeOrUuid, String reason, Date asOf)
+	        throws APIException {
+		assertText(patientUuid, "Patient UUID is required");
+		assertText(modelCodeOrUuid, "Care Model code or UUID is required");
+		Patient patient = Context.getPatientService().getPatientByUuid(patientUuid.trim());
+		CareModel model = findModel(modelCodeOrUuid.trim());
+		if (patient == null || Boolean.TRUE.equals(patient.getVoided()) || model == null) {
+			throw new APIException("Patient or Care Model not found");
+		}
+		return enrollManually(patient.getPatientId(), model.getId(), reason, asOf);
+	}
+
+	@Override
+	@Transactional
+	public CareModelMember transitionEnrollment(String memberUuid, MemberStatus newStatus, String reason, Date asOf)
+	        throws APIException {
+		assertText(memberUuid, "Membership UUID is required");
+		assertReason(reason);
+		if (newStatus == null) {
+			throw new APIException("Target membership status is required");
+		}
+		CareModelMember member = getMemberForUpdate(memberUuid);
+		CareModel model = careModelDAO.getCareModelById(member.getCareModelId());
+		if (model == null) {
+			throw new APIException("Care Model not found: " + member.getCareModelId());
+		}
+		authorizeCommand(member.getPatientId(), model);
+		if (member.getStatus() == newStatus) {
+			return member;
+		}
+		assertTransition(member.getStatus(), newStatus);
+
+		Date effectiveAt = effectiveDate(asOf);
+		member.setStatus(newStatus);
+		if (newStatus == MemberStatus.COMPLETED || newStatus == MemberStatus.WITHDRAWN) {
+			member.setDateCompleted(effectiveAt);
+		} else if (newStatus == MemberStatus.ACTIVE) {
+			member.setDateCompleted(null);
+		}
+		member.setMembershipData(appendHistory(member.getMembershipData(), historyType(newStatus), effectiveAt, reason, null));
+		return memberDAO.saveCareModelMember(member);
+	}
+
 	private PublishedModel lockModel(Integer careModelId) {
 		CareModel model = careModelDAO.getCareModelByIdForUpdate(careModelId);
 		if (model == null) {
@@ -193,7 +249,44 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 			throw new APIException("Care Model has no published definition");
 		}
 		assertText(envelope.getPublished().getVersion(), "Published definition version is missing");
-		return new PublishedModel(envelope.getPublished().getVersion(), envelope.getPublished().getDefinition());
+		return new PublishedModel(model, envelope.getPublished().getVersion(), envelope.getPublished().getDefinition());
+	}
+
+	private CareModel findModel(String codeOrUuid) {
+		return codeOrUuid.matches("^[0-9a-fA-F-]{36}$") ? careModelDAO.getCareModelByUuid(codeOrUuid) : careModelDAO
+		        .getCareModelByCode(codeOrUuid);
+	}
+
+	private void authorizeCommand(Integer patientId, CareModel model) {
+		if (commandAuthorizer == null) {
+			throw new APIException("Care Model membership is not authorized");
+		}
+		commandAuthorizer.authorize(patientId, model);
+	}
+
+	private void assertTransition(MemberStatus current, MemberStatus target) {
+		boolean allowed = current == MemberStatus.ACTIVE
+		        && (target == MemberStatus.SUSPENDED || target == MemberStatus.COMPLETED || target == MemberStatus.WITHDRAWN)
+		        || current == MemberStatus.SUSPENDED
+		        && (target == MemberStatus.ACTIVE || target == MemberStatus.COMPLETED || target == MemberStatus.WITHDRAWN);
+		if (!allowed) {
+			throw new APIException("Membership transition from " + current + " to " + target + " is not allowed");
+		}
+	}
+
+	private String historyType(MemberStatus status) {
+		switch (status) {
+			case ACTIVE:
+				return "RESUMED";
+			case SUSPENDED:
+				return "SUSPENDED";
+			case COMPLETED:
+				return "COMPLETED";
+			case WITHDRAWN:
+				return "WITHDRAWN";
+			default:
+				throw new APIException("Unsupported membership transition: " + status);
+		}
 	}
 
 	private void assertRuleEnabled(JsonNode definition, String ruleId, Action action) {
@@ -346,6 +439,14 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		return member;
 	}
 
+	private CareModelMember getMemberForUpdate(String uuid) {
+		CareModelMember member = memberDAO.getCareModelMemberByUuidForUpdate(uuid);
+		if (member == null || Boolean.TRUE.equals(member.getVoided())) {
+			throw new APIException("Care Model membership not found: " + uuid);
+		}
+		return member;
+	}
+
 	private void assertPendingConfirmation(CareModelMember member) {
 		if (member.getStatus() != MemberStatus.PENDING || !SOURCE_CONFIRMATION.equals(member.getEnrollmentSource())) {
 			throw new APIException("Only pending confirmation proposals can be confirmed or declined");
@@ -394,11 +495,14 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 
 	private static final class PublishedModel {
 
+		private final CareModel model;
+
 		private final String version;
 
 		private final JsonNode definition;
 
-		private PublishedModel(String version, JsonNode definition) {
+		private PublishedModel(CareModel model, String version, JsonNode definition) {
+			this.model = model;
 			this.version = version;
 			this.definition = definition;
 		}

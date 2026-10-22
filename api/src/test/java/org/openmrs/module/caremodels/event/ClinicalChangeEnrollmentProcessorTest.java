@@ -231,6 +231,18 @@ public class ClinicalChangeEnrollmentProcessorTest {
 		        throws APIException {
 			throw new UnsupportedOperationException();
 		}
+
+		@Override
+		public CareModelMember enrollManually(String patientUuid, String modelCodeOrUuid, String reason, Date asOf)
+		        throws APIException {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public CareModelMember transitionEnrollment(String memberUuid, CareModelMember.MemberStatus newStatus,
+		        String reason, Date asOf) throws APIException {
+			throw new UnsupportedOperationException();
+		}
 	}
 
 	private static final class FakeCareModelDAO implements CareModelDAO {
