@@ -151,6 +151,12 @@ public class MembershipOperationResourceTest {
 		}
 
 		@Override
+		public CareModelMember applyBackfillEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
+		        String sourceUuid, Date asOf) throws APIException {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public int flagEnrollmentsForReview(Integer patientId, String sourceUuid, String reason, Date asOf)
 		        throws APIException {
 			throw new UnsupportedOperationException();

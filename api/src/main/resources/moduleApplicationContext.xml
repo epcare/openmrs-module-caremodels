@@ -64,6 +64,11 @@
         <property name="sessionFactory" ref="dbSessionFactory" />
     </bean>
 
+    <bean id="caremodels.HibernateEnrollmentReconciliationDAO"
+          class="org.openmrs.module.caremodels.api.db.hibernate.HibernateEnrollmentReconciliationDAO">
+        <property name="sessionFactory" ref="dbSessionFactory" />
+    </bean>
+
     <bean id="caremodels.EnrollmentCommandAuthorizer"
           class="org.openmrs.module.caremodels.api.impl.OpenmrsEnrollmentCommandAuthorizer" />
 
@@ -131,6 +136,31 @@
             <list>
                 <value>org.openmrs.module.caremodels.api.CareModelEnrollmentService</value>
                 <ref bean="caremodels.CareModelEnrollmentService" />
+            </list>
+        </property>
+    </bean>
+
+    <bean id="caremodels.CareModelReconciliationService"
+          class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager" />
+        <property name="target">
+            <bean class="org.openmrs.module.caremodels.api.impl.CareModelReconciliationServiceImpl">
+                <property name="reconciliationDAO" ref="caremodels.HibernateEnrollmentReconciliationDAO" />
+                <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
+                <property name="evidenceFactory" ref="caremodels.EnrollmentRuleEvidenceFactory" />
+                <property name="ruleEngine" ref="caremodels.EnrollmentRuleEngine" />
+                <property name="enrollmentService" ref="caremodels.CareModelEnrollmentService" />
+            </bean>
+        </property>
+        <property name="preInterceptors" ref="serviceInterceptors" />
+        <property name="transactionAttributeSource" ref="transactionAttributeSource" />
+    </bean>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list>
+                <value>org.openmrs.module.caremodels.api.CareModelReconciliationService</value>
+                <ref bean="caremodels.CareModelReconciliationService" />
             </list>
         </property>
     </bean>
