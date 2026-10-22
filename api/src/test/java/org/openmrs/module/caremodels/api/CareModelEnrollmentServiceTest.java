@@ -101,6 +101,31 @@ public class CareModelEnrollmentServiceTest {
 	}
 
 	@Test
+	public void shouldCreateIdempotentBackfillEnrollmentWithBackfillProvenance() throws Exception {
+		CareModelMember first = service.applyBackfillEnrollment(7, 3, "auto-rule", Action.AUTO_ENROLL, "backfill-uuid", NOW);
+		CareModelMember replay = service
+		        .applyBackfillEnrollment(7, 3, "auto-rule", Action.AUTO_ENROLL, "backfill-uuid", NOW);
+
+		assertSame(first, replay);
+		assertEquals("BACKFILL", first.getEnrollmentSource());
+		assertEquals("BACKFILL", mapper.readTree(first.getMembershipData()).path("enrollment").path("trigger").path("type")
+		        .asText());
+	}
+
+	@Test
+	public void shouldKeepBackfillProposalConfirmable() throws Exception {
+		CareModelMember proposal = service.applyBackfillEnrollment(7, 3, "confirm-rule", Action.PROPOSE_CONFIRMATION,
+		    "backfill-confirm", NOW);
+
+		assertEquals(MemberStatus.PENDING, proposal.getStatus());
+		assertEquals("CONFIRMATION", proposal.getEnrollmentSource());
+		assertEquals("BACKFILL",
+		    mapper.readTree(proposal.getMembershipData()).path("enrollment").path("trigger").path("type").asText());
+		assertEquals(MemberStatus.ACTIVE,
+		    service.confirmEnrollment(proposal.getUuid(), "Patient accepted reconciliation proposal", NOW).getStatus());
+	}
+
+	@Test
 	public void shouldReplaySameSourceWithoutCreatingAnotherEpisode() {
 		CareModelMember first = service.applyRuleEnrollment(7, 3, "confirm-rule", Action.PROPOSE_CONFIRMATION, "event-2",
 		    NOW);

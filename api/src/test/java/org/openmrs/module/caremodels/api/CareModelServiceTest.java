@@ -32,6 +32,7 @@ public class CareModelServiceTest extends BaseModuleContextSensitiveTest {
 		Assert.assertNotNull(service);
 		Assert.assertNotNull(Context.getService(CareModelMemberService.class));
 		Assert.assertNotNull(Context.getService(CareModelEnrollmentService.class));
+		Assert.assertNotNull(Context.getService(CareModelReconciliationService.class));
 		Assert.assertNotNull(Context.getRegisteredComponent("caremodels.ClinicalChangeEnrollmentProcessor",
 		    ClinicalChangeListener.class));
 	}

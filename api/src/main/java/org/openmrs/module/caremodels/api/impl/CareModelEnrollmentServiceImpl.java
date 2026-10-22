@@ -45,6 +45,8 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 
 	private static final String SOURCE_MANUAL = "MANUAL";
 
+	private static final String SOURCE_BACKFILL = "BACKFILL";
+
 	private CareModelDAO careModelDAO;
 
 	private CareModelMemberDAO memberDAO;
@@ -79,6 +81,18 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 	@Transactional
 	public CareModelMember applyRuleEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
 	        String sourceUuid, Date asOf) throws APIException {
+		return applyRuleEnrollment(patientId, careModelId, ruleId, action, sourceUuid, asOf, false);
+	}
+
+	@Override
+	@Transactional
+	public CareModelMember applyBackfillEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
+	        String sourceUuid, Date asOf) throws APIException {
+		return applyRuleEnrollment(patientId, careModelId, ruleId, action, sourceUuid, asOf, true);
+	}
+
+	private CareModelMember applyRuleEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
+	        String sourceUuid, Date asOf, boolean backfill) {
 		assertIds(patientId, careModelId);
 		assertText(ruleId, "Rule id is required");
 		if (ruleId.length() > 100) {
@@ -100,19 +114,21 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		CareModelMember open = memberDAO.getOpenMember(patientId, careModelId);
 		if (open != null) {
 			if (open.getStatus() == MemberStatus.PENDING && action == Action.AUTO_ENROLL) {
-				activate(open, SOURCE_AUTO, ruleId, published.version, sourceUuid, effectiveAt, null);
+				String source = backfill ? SOURCE_BACKFILL : SOURCE_AUTO;
+				activate(open, source, ruleId, published.version, sourceUuid, effectiveAt, null);
 				return memberDAO.saveCareModelMember(open);
 			}
 			return open;
 		}
 
 		MemberStatus status = action == Action.AUTO_ENROLL ? MemberStatus.ACTIVE : MemberStatus.PENDING;
-		String source = action == Action.AUTO_ENROLL ? SOURCE_AUTO : SOURCE_CONFIRMATION;
+		String source = action == Action.AUTO_ENROLL ? (backfill ? SOURCE_BACKFILL : SOURCE_AUTO) : SOURCE_CONFIRMATION;
+		String triggerType = backfill ? SOURCE_BACKFILL : source;
 		String historyType = status == MemberStatus.ACTIVE ? "ENROLLED" : "EPISODE_STARTED";
 		CareModelMember member = newMember(patientId, careModelId, status, source, sourceUuid,
 		    memberDAO.getNextEpisodeNumber(patientId, careModelId), effectiveAt);
-		member.setMembershipData(newMembershipData(published.version, ruleId, source, sourceUuid, historyType, effectiveAt,
-		    null));
+		member.setMembershipData(newMembershipData(published.version, ruleId, triggerType, sourceUuid, historyType,
+		    effectiveAt, null));
 		return memberDAO.saveCareModelMember(member);
 	}
 
