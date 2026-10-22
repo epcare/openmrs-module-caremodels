@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
@@ -30,6 +31,7 @@ import org.openmrs.module.caremodels.api.db.CareModelDAO;
 import org.openmrs.module.caremodels.api.db.CareModelMemberDAO;
 import org.openmrs.module.caremodels.api.impl.CareModelEnrollmentServiceImpl;
 import org.openmrs.module.caremodels.api.impl.EnrollmentActorProvider;
+import org.openmrs.module.caremodels.api.impl.EnrollmentCommandAuthorizer;
 import org.openmrs.module.caremodels.config.JsonSchemaValidator;
 import org.openmrs.module.caremodels.config.JsonSchemaValidator.SchemaType;
 import org.openmrs.module.caremodels.config.StorageEnvelope;
@@ -53,6 +55,11 @@ public class CareModelEnrollmentServiceTest {
 
 	private FakeMemberDAO memberDAO;
 
+	@BeforeClass
+	public static void configureApplicationDataDirectory() {
+		System.setProperty("OPENMRS_APPLICATION_DATA_DIRECTORY", System.getProperty("java.io.tmpdir"));
+	}
+
 	@Before
 	public void setup() throws Exception {
 		modelDAO = new FakeCareModelDAO(model(true));
@@ -66,6 +73,13 @@ public class CareModelEnrollmentServiceTest {
 			@Override
 			public String getCurrentActor() {
 				return "actor-uuid";
+			}
+		});
+		service.setCommandAuthorizer(new EnrollmentCommandAuthorizer() {
+
+			@Override
+			public void authorize(Integer patientId, CareModel model) {
+				// Unit tests exercise the command semantics independently of OpenMRS Context.
 			}
 		});
 	}
@@ -147,6 +161,49 @@ public class CareModelEnrollmentServiceTest {
 		assertEquals(2, mapper.readTree(enrolled.getMembershipData()).path("history").size());
 	}
 
+	@Test
+	public void shouldSuspendAndResumeWithAuditedHistory() throws Exception {
+		CareModelMember member = service.enrollManually(8, 3, "Initial decision", NOW);
+		Date suspendedAt = new Date(NOW.getTime() + 1000);
+		service.transitionEnrollment(member.getUuid(), MemberStatus.SUSPENDED, "Treatment paused", suspendedAt);
+		assertEquals(MemberStatus.SUSPENDED, member.getStatus());
+
+		Date resumedAt = new Date(NOW.getTime() + 2000);
+		service.transitionEnrollment(member.getUuid(), MemberStatus.ACTIVE, "Treatment resumed", resumedAt);
+		assertEquals(MemberStatus.ACTIVE, member.getStatus());
+		assertEquals(null, member.getDateCompleted());
+		JsonNode history = mapper.readTree(member.getMembershipData()).path("history");
+		assertEquals("SUSPENDED", history.get(1).path("type").asText());
+		assertEquals("RESUMED", history.get(2).path("type").asText());
+		assertEquals("actor-uuid", history.get(2).path("actor").asText());
+		assertTrue(new JsonSchemaValidator(mapper).validate(mapper.readTree(member.getMembershipData()),
+		    SchemaType.MEMBERSHIP_DATA).isValid());
+	}
+
+	@Test
+	public void shouldCompleteEpisodeAndRejectFurtherTransition() {
+		CareModelMember member = service.enrollManually(8, 3, "Initial decision", NOW);
+		Date completedAt = new Date(NOW.getTime() + 1000);
+		service.transitionEnrollment(member.getUuid(), MemberStatus.COMPLETED, "Goals met", completedAt);
+		assertEquals(MemberStatus.COMPLETED, member.getStatus());
+		assertEquals(completedAt, member.getDateCompleted());
+		try {
+			service.transitionEnrollment(member.getUuid(), MemberStatus.ACTIVE, "Reopen", completedAt);
+		}
+		catch (APIException expected) {
+			assertTrue(expected.getMessage().contains("not allowed"));
+			return;
+		}
+		throw new AssertionError("Expected completed membership to be terminal");
+	}
+
+	@Test(expected = APIException.class)
+	public void shouldRejectLifecycleTransitionForPendingProposal() {
+		CareModelMember proposal = service.applyRuleEnrollment(7, 3, "confirm-rule", Action.PROPOSE_CONFIRMATION, "event-8",
+		    NOW);
+		service.transitionEnrollment(proposal.getUuid(), MemberStatus.SUSPENDED, "Not yet enrolled", NOW);
+	}
+
 	@Test(expected = APIException.class)
 	public void shouldRejectRuleThatIsNotInPublishedDefinition() {
 		service.applyRuleEnrollment(7, 3, "missing", Action.AUTO_ENROLL, "event-6", NOW);
@@ -170,6 +227,8 @@ public class CareModelEnrollmentServiceTest {
 		assertAuthorized("confirmEnrollment", String.class, String.class, Date.class);
 		assertAuthorized("declineEnrollment", String.class, String.class, Date.class);
 		assertAuthorized("enrollManually", Integer.class, Integer.class, String.class, Date.class);
+		assertAuthorized("enrollManually", String.class, String.class, String.class, Date.class);
+		assertAuthorized("transitionEnrollment", String.class, MemberStatus.class, String.class, Date.class);
 		Authorized lowLevelSave = CareModelMemberService.class.getMethod("saveMember", CareModelMember.class).getAnnotation(
 		    Authorized.class);
 		assertNotNull(lowLevelSave);
@@ -255,8 +314,8 @@ public class CareModelEnrollmentServiceTest {
 
 		@Override
 		public List<CareModel> getPublishedCareModelsForEnrollment() {
-			return model == null ? java.util.Collections.<CareModel> emptyList()
-			        : java.util.Collections.singletonList(model);
+			return model == null ? java.util.Collections.<CareModel> emptyList() : java.util.Collections
+			        .singletonList(model);
 		}
 
 		@Override
@@ -310,6 +369,11 @@ public class CareModelEnrollmentServiceTest {
 				}
 			}
 			return null;
+		}
+
+		@Override
+		public CareModelMember getCareModelMemberByUuidForUpdate(String uuid) {
+			return getCareModelMemberByUuid(uuid);
 		}
 
 		@Override

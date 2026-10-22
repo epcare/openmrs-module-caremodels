@@ -12,6 +12,7 @@ package org.openmrs.module.caremodels.api.db.hibernate;
 import java.util.List;
 
 import org.hibernate.Criteria;
+import org.hibernate.LockMode;
 import org.openmrs.api.db.hibernate.DbSessionFactory;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Projections;
@@ -51,6 +52,12 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 	public CareModelMember getCareModelMemberByUuid(String uuid) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
 		        .add(Restrictions.eq("uuid", uuid)).uniqueResult();
+	}
+
+	@Override
+	public CareModelMember getCareModelMemberByUuidForUpdate(String uuid) {
+		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
+		        .add(Restrictions.eq("uuid", uuid)).setLockMode(LockMode.PESSIMISTIC_WRITE).uniqueResult();
 	}
 
 	@Override

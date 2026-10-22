@@ -72,11 +72,14 @@ public interface CareModelMemberService extends OpenmrsService {
 	        throws APIException;
 	
 	@Transactional
+	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
 	CareModelMember voidMember(CareModelMember member, String reason) throws APIException;
 	
 	@Transactional
+	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
 	CareModelMember unvoidMember(CareModelMember member) throws APIException;
 	
 	@Transactional
+	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
 	void purgeMember(CareModelMember member) throws APIException;
 }

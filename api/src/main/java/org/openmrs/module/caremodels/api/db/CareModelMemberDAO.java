@@ -26,6 +26,9 @@ public interface CareModelMemberDAO {
 	
 	CareModelMember getCareModelMemberByUuid(String uuid);
 
+	/** Locks one membership episode for a serialized clinician transition. */
+	CareModelMember getCareModelMemberByUuidForUpdate(String uuid);
+
 	/** Finds a prior rule-driven enrollment for idempotent event replay. */
 	CareModelMember getMemberBySource(Integer patientId, Integer careModelId, String sourceUuid);
 
