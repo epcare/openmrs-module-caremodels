@@ -339,6 +339,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		option.setDisplayLabel(definition.path("metadata").path("display").path("label").asText(model.getCode()));
 		option.setCategory(definition.path("metadata").path("category").asText(null));
 		option.setRequiresReason(manual.path("requiresReason").asBoolean(false));
+		option.setRequiresConfirmation(manual.path("requiresConfirmation").asBoolean(false));
 		Date now = new Date();
 		CareModelMember open = memberDAO.getOpenMember(patient.getId(), model.getId());
 		if (open != null) {

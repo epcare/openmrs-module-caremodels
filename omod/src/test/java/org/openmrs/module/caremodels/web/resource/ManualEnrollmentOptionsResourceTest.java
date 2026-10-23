@@ -74,6 +74,45 @@ public class ManualEnrollmentOptionsResourceTest {
 	}
 	
 	@Test
+	public void enrollmentCheckMapsPolicyResultsToStructuredStatuses() {
+		EnrollmentCheckResource check = new EnrollmentCheckResource();
+		EnrollmentCheckRequest request = new EnrollmentCheckRequest();
+		request.setPatient("patient");
+		request.setModel("hiv");
+		
+		when(enrollment.evaluateManualEnrollment("patient", "hiv")).thenReturn(option(true, null, true));
+		EnrollmentCheckRequest eligible = check.save(request);
+		assertEquals("ELIGIBLE", eligible.getStatus());
+		assertTrue(eligible.isCanEnroll());
+		assertTrue(eligible.isRequiresReason());
+		
+		when(enrollment.evaluateManualEnrollment("patient", "hiv")).thenReturn(option(true, "PENDING", true));
+		assertEquals("REQUIRES_CONFIRMATION", check.save(request).getStatus());
+		
+		when(enrollment.evaluateManualEnrollment("patient", "hiv")).thenReturn(option(false, "ACTIVE", false));
+		EnrollmentCheckRequest enrolled = check.save(request);
+		assertEquals("ALREADY_ENROLLED", enrolled.getStatus());
+		assertFalse(enrolled.isCanEnroll());
+		
+		when(enrollment.evaluateManualEnrollment("patient", "hiv")).thenReturn(option(false, null, false));
+		EnrollmentCheckRequest ineligible = check.save(request);
+		assertEquals("NOT_ELIGIBLE", ineligible.getStatus());
+		assertFalse(ineligible.isCanEnroll());
+	}
+	
+	private ManualEnrollmentOption option(boolean eligible, String openStatus, boolean requiresReason) {
+		ManualEnrollmentOption option = new ManualEnrollmentOption();
+		option.setModelUuid("model-uuid");
+		option.setModelCode("hiv");
+		option.setDisplayLabel("HIV Care");
+		option.setRequiresReason(requiresReason);
+		option.setAlreadyEnrolled(openStatus != null);
+		option.setOpenStatus(openStatus);
+		option.setEligible(eligible);
+		return option;
+	}
+	
+	@Test
 	public void eligibilityFlagIsRepresentedEvenWhenFalse() {
 		ManualEnrollmentOption option = new ManualEnrollmentOption();
 		option.setModelCode("hiv");

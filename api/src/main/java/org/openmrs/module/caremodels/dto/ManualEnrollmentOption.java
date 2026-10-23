@@ -16,6 +16,8 @@ public class ManualEnrollmentOption {
 	
 	private boolean requiresReason;
 	
+	private boolean requiresConfirmation;
+	
 	private boolean alreadyEnrolled;
 	
 	private String openStatus;
@@ -62,6 +64,14 @@ public class ManualEnrollmentOption {
 	
 	public void setRequiresReason(boolean requiresReason) {
 		this.requiresReason = requiresReason;
+	}
+	
+	public boolean isRequiresConfirmation() {
+		return requiresConfirmation;
+	}
+	
+	public void setRequiresConfirmation(boolean requiresConfirmation) {
+		this.requiresConfirmation = requiresConfirmation;
 	}
 	
 	public boolean isAlreadyEnrolled() {
