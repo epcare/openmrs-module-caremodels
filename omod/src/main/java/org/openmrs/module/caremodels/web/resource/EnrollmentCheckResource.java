@@ -62,6 +62,14 @@ public class EnrollmentCheckResource extends DelegatingCrudResource<EnrollmentCh
 	}
 	
 	@Override
+	public DelegatingResourceDescription getCreatableProperties() {
+		DelegatingResourceDescription description = new DelegatingResourceDescription();
+		description.addRequiredProperty("patient");
+		description.addRequiredProperty("model");
+		return description;
+	}
+	
+	@Override
 	public EnrollmentCheckRequest getByUniqueId(String uniqueId) {
 		throw new UnsupportedOperationException("Enrollment checks are submitted per patient and model");
 	}

@@ -113,6 +113,13 @@ public class ManualEnrollmentOptionsResourceTest {
 	}
 	
 	@Test
+	public void enrollmentCheckDeclaresItsRequestShapeSoPostReachesSave() {
+		DelegatingResourceDescription creatable = new EnrollmentCheckResource().getCreatableProperties();
+		assertTrue(creatable.getProperties().containsKey("patient"));
+		assertTrue(creatable.getProperties().containsKey("model"));
+	}
+	
+	@Test
 	public void eligibilityFlagIsRepresentedEvenWhenFalse() {
 		ManualEnrollmentOption option = new ManualEnrollmentOption();
 		option.setModelCode("hiv");
