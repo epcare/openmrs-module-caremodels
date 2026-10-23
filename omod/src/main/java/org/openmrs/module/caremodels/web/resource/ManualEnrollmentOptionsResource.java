@@ -50,6 +50,13 @@ public class ManualEnrollmentOptionsResource extends DelegatingCrudResource<Manu
 		throw new UnsupportedOperationException("Purge is not supported for enrollment options");
 	}
 	
+	// RESTWS dispatches collection GETs carrying custom query parameters (patient, model) to
+	// doSearch, not doGetAll — route them back to the controlled listing (same as MembershipResource).
+	@Override
+	protected PageableResult doSearch(RequestContext context) throws ResponseException {
+		return doGetAll(context);
+	}
+	
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		String patientUuid = trimToNull(context.getParameter("patient"));
