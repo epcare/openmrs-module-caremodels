@@ -10,6 +10,9 @@
 package org.openmrs.module.caremodels.api;
 
 import java.util.Date;
+import java.util.List;
+
+import org.openmrs.module.caremodels.dto.ManualEnrollmentOption;
 
 import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
@@ -65,4 +68,14 @@ public interface CareModelEnrollmentService extends OpenmrsService {
 	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
 	CareModelMember transitionEnrollment(String memberUuid, MemberStatus newStatus, String reason, Date asOf)
 	        throws APIException;
+	
+	/** Read-only discovery of published, manually enrollable models for one patient. */
+	@Transactional(readOnly = true)
+	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
+	List<ManualEnrollmentOption> listManualEnrollmentOptions(String patientUuid) throws APIException;
+	
+	/** Read-only eligibility evaluation for one explicit model; never persists anything. */
+	@Transactional(readOnly = true)
+	@Authorized(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS)
+	ManualEnrollmentOption evaluateManualEnrollment(String patientUuid, String modelCodeOrUuid) throws APIException;
 }

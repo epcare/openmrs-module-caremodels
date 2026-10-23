@@ -20,12 +20,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Background/admin-only missed-event recovery. Never called by membership or workspace reads. */
 public interface CareModelReconciliationService extends OpenmrsService {
-
+	
 	/** Advances the durable background checkpoint by one bounded model/patient batch. */
 	@Transactional(timeout = 30)
 	@Authorized(CareModelsPrivileges.MANAGE_CARE_MODELS)
 	int reconcileNextBatch(int limit);
-
+	
 	/** Caller-managed backfill. Reuse asOf when retrying the same logical run. */
 	@Transactional(timeout = 30)
 	@Authorized(CareModelsPrivileges.MANAGE_CARE_MODELS)

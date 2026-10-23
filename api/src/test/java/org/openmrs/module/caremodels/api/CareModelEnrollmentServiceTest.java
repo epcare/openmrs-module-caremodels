@@ -10,6 +10,8 @@
 package org.openmrs.module.caremodels.api;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -26,6 +28,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.openmrs.annotation.Authorized;
+import org.openmrs.Patient;
 import org.openmrs.api.APIException;
 import org.openmrs.module.caremodels.api.db.CareModelDAO;
 import org.openmrs.module.caremodels.api.db.CareModelMemberDAO;
@@ -36,6 +39,7 @@ import org.openmrs.module.caremodels.config.JsonSchemaValidator;
 import org.openmrs.module.caremodels.config.JsonSchemaValidator.SchemaType;
 import org.openmrs.module.caremodels.config.StorageEnvelope;
 import org.openmrs.module.caremodels.dto.CareModelRef;
+import org.openmrs.module.caremodels.dto.ManualEnrollmentOption;
 import org.openmrs.module.caremodels.model.CareModel;
 import org.openmrs.module.caremodels.model.CareModel.CareModelStatus;
 import org.openmrs.module.caremodels.model.CareModelMember;
@@ -325,6 +329,77 @@ public class CareModelEnrollmentServiceTest {
 		    Authorized.class);
 		assertNotNull(authorized);
 		assertEquals(CareModelsPrivileges.TRANSITION_CARE_MODEL_MEMBERS, authorized.value()[0]);
+	}
+	
+	@Test
+	public void shouldEvaluateEligibleManualEnrollmentFromPolicyOnly() throws Exception {
+		CareModel manual = model(true);
+		ManualEnrollmentOption option = service.evaluate(new Patient(7), manual);
+		assertNotNull(option);
+		assertTrue(option.isEligible());
+		assertFalse(option.isAlreadyEnrolled());
+		assertTrue(option.isRequiresReason());
+		assertNull(option.getOpenStatus());
+		// The definition carries no metadata label in this fixture; the model code is the fallback.
+		assertEquals("test-model", option.getDisplayLabel());
+	}
+	
+	@Test
+	public void shouldReturnNullWhenManualEnrollmentIsDisabled() throws Exception {
+		assertNull(service.evaluate(new Patient(7), model(false)));
+	}
+	
+	@Test
+	public void shouldMarkOpenActiveEpisodesAlreadyEnrolledAndIneligible() throws Exception {
+		service.enrollManually(7, 3, "Clinician decision", NOW);
+		ManualEnrollmentOption option = service.evaluate(new Patient(7), model(true));
+		assertTrue(option.isAlreadyEnrolled());
+		assertEquals(MemberStatus.ACTIVE.name(), option.getOpenStatus());
+		assertFalse(option.isEligible());
+	}
+	
+	@Test
+	public void shouldOfferActivationForPendingProposalsWithoutANewEpisode() throws Exception {
+		service.applyRuleEnrollment(7, 3, "confirm-rule", Action.PROPOSE_CONFIRMATION, "event-9", NOW);
+		ManualEnrollmentOption option = service.evaluate(new Patient(7), model(true));
+		assertTrue(option.isAlreadyEnrolled());
+		assertEquals(MemberStatus.PENDING.name(), option.getOpenStatus());
+		assertTrue(option.isEligible());
+	}
+	
+	@Test
+	public void shouldHonorReenrollmentCooldownWhenNoOpenEpisodeExists() throws Exception {
+		service.enrollManually(7, 3, "Initial decision", NOW);
+		service.transitionEnrollment(service.enrollManually(7, 3, "Initial decision", NOW).getUuid(),
+		    MemberStatus.COMPLETED, "Care completed", new Date(NOW.getTime() + 86400000L));
+		ManualEnrollmentOption option = service.evaluate(new Patient(7), model(true));
+		assertFalse(option.isEligible());
+		assertTrue(option.getReason().contains("Reenrollment"));
+	}
+	
+	@Test
+	public void shouldSurfaceCategoryAndLabelFromPublishedDefinitionMetadata() throws Exception {
+		JsonNode definition = mapper.readTree("{\"metadata\":{\"category\":\"CHRONIC_CARE\",\"display\":"
+		        + "{\"label\":\"HIV Care and Treatment\"}},\"enrollment\":{\"manualEnrollment\":"
+		        + "{\"enabled\":true,\"requiresReason\":false}}}");
+		StorageEnvelope.PublishedSnapshot published = new StorageEnvelope.PublishedSnapshot();
+		published.setVersion("2.1.0");
+		published.setDefinition(definition);
+		StorageEnvelope envelope = new StorageEnvelope();
+		envelope.setPublished(published);
+		CareModel model = new CareModel();
+		model.setId(4);
+		model.setUuid("model-uuid-4");
+		model.setCode("hiv");
+		model.setPrivilege("View Care Models");
+		model.setStatus(CareModelStatus.PUBLISHED);
+		model.setRetired(false);
+		model.setConfiguration(envelope.toJson(mapper));
+		ManualEnrollmentOption option = service.evaluate(new Patient(7), model);
+		assertEquals("HIV Care and Treatment", option.getDisplayLabel());
+		assertEquals("CHRONIC_CARE", option.getCategory());
+		assertFalse(option.isRequiresReason());
+		assertTrue(option.isEligible());
 	}
 	
 	private CareModel model(boolean manualEnabled) throws Exception {
