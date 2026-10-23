@@ -21,6 +21,16 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class WorkspaceTab {
 	
+	private JsonNode descriptors;
+	
+	public JsonNode getDescriptors() {
+		return descriptors;
+	}
+	
+	public void setDescriptors(JsonNode descriptors) {
+		this.descriptors = descriptors;
+	}
+	
 	private String modelCode;
 	
 	private String modelUuid;

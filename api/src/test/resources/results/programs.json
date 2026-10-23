@@ -1,0 +1,33 @@
+{
+  "type": "program-state",
+  "resolverVersion": "1.0.0",
+  "assessedAt": "2026-10-21T12:00:00Z",
+  "provenance": "OpenMRS service API",
+  "status": "ok",
+  "records": [
+    {
+      "uuid": "example-enrollment",
+      "dateEnrolled": "2026-01-01T00:00:00Z",
+      "dateCompleted": null,
+      "currentStates": [
+        {
+          "uuid": "example-patient-state",
+          "stateUuid": "example-workflow-state",
+          "workflowUuid": "example-workflow",
+          "startDate": "2026-01-01T00:00:00Z"
+        }
+      ],
+      "statesTruncated": false
+    }
+  ],
+  "availableFields": [
+    "uuid",
+    "dateEnrolled",
+    "dateCompleted",
+    "currentStates",
+    "statesTruncated"
+  ],
+  "returnedCount": 1,
+  "truncated": false,
+  "total": null
+}

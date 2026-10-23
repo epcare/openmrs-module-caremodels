@@ -15,13 +15,13 @@ import org.openmrs.api.db.hibernate.DbSessionFactory;
 import org.openmrs.module.caremodels.api.db.EnrollmentReconciliationDAO;
 
 public class HibernateEnrollmentReconciliationDAO implements EnrollmentReconciliationDAO {
-
+	
 	private DbSessionFactory sessionFactory;
-
+	
 	public void setSessionFactory(DbSessionFactory sessionFactory) {
 		this.sessionFactory = sessionFactory;
 	}
-
+	
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<Integer> getPatientIdsAfter(Integer afterPatientId, int limit) {

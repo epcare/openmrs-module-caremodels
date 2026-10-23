@@ -266,7 +266,7 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 		CareModelMember member = memberService.getCurrentMember(patient.getPatientId(), model.getId());
 		member.setStatus(MemberStatus.SUSPENDED);
 		memberService.saveMember(member);
-
+		
 		try {
 			accessService.authorizeWorkspace(patient.getUuid(), model.getCode(), "overview");
 			Assert.fail("suspended memberships must not authorize a workspace");
@@ -275,12 +275,12 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 			Assert.assertTrue(e.getMessage().contains("No active membership"));
 		}
 	}
-
+	
 	@Test
 	public void shouldAuthorizeClinicianWithoutModelManagementPrivilege() throws Exception {
 		org.openmrs.Patient patient = createTestPatient();
 		CareModel model = enrolledPublishedModel("ACCESS_CLINICIAN", patient);
-
+		
 		User clinician = createUser("accessclinician", CareModelsPrivileges.VIEW_CARE_MODELS, modelPrivilege(),
 		    "View Patients", "Get Patients");
 		Context.authenticate(clinician.getUsername(), "Test1234!");
@@ -294,7 +294,7 @@ public class CareModelAccessServiceTest extends BaseModuleContextSensitiveTest {
 			Context.authenticate("admin", System.getProperty("junit.password", "test"));
 		}
 	}
-
+	
 	@Test
 	public void shouldFailClosedForUnknownPatient() {
 		try {

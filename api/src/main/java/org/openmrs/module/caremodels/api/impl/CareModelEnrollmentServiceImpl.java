@@ -36,61 +36,61 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Default enrollment implementation. The locked model row serializes episode creation. */
 public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implements CareModelEnrollmentService {
-
+	
 	private static final int MAX_HISTORY = 100;
-
+	
 	private static final String SOURCE_AUTO = "AUTO";
-
+	
 	private static final String SOURCE_CONFIRMATION = "CONFIRMATION";
-
+	
 	private static final String SOURCE_MANUAL = "MANUAL";
-
+	
 	private static final String SOURCE_BACKFILL = "BACKFILL";
-
+	
 	private CareModelDAO careModelDAO;
-
+	
 	private CareModelMemberDAO memberDAO;
-
+	
 	private ObjectMapper objectMapper = new ObjectMapper();
-
+	
 	private EnrollmentActorProvider actorProvider = new OpenmrsEnrollmentActorProvider();
-
+	
 	private EnrollmentCommandAuthorizer commandAuthorizer = new OpenmrsEnrollmentCommandAuthorizer();
-
+	
 	public void setCareModelDAO(CareModelDAO careModelDAO) {
 		this.careModelDAO = careModelDAO;
 	}
-
+	
 	public void setMemberDAO(CareModelMemberDAO memberDAO) {
 		this.memberDAO = memberDAO;
 	}
-
+	
 	public void setObjectMapper(ObjectMapper objectMapper) {
 		this.objectMapper = objectMapper;
 	}
-
+	
 	public void setActorProvider(EnrollmentActorProvider actorProvider) {
 		this.actorProvider = actorProvider;
 	}
-
+	
 	public void setCommandAuthorizer(EnrollmentCommandAuthorizer commandAuthorizer) {
 		this.commandAuthorizer = commandAuthorizer;
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModelMember applyRuleEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
 	        String sourceUuid, Date asOf) throws APIException {
 		return applyRuleEnrollment(patientId, careModelId, ruleId, action, sourceUuid, asOf, false);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModelMember applyBackfillEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
 	        String sourceUuid, Date asOf) throws APIException {
 		return applyRuleEnrollment(patientId, careModelId, ruleId, action, sourceUuid, asOf, true);
 	}
-
+	
 	private CareModelMember applyRuleEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
 	        String sourceUuid, Date asOf, boolean backfill) {
 		assertIds(patientId, careModelId);
@@ -102,14 +102,14 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		if (action != Action.AUTO_ENROLL && action != Action.PROPOSE_CONFIRMATION) {
 			throw new APIException("Only AUTO_ENROLL and PROPOSE_CONFIRMATION create membership episodes");
 		}
-
+		
 		PublishedModel published = lockModel(careModelId);
 		CareModelMember replay = memberDAO.getMemberBySource(patientId, careModelId, sourceUuid);
 		if (replay != null) {
 			return replay;
 		}
 		assertRuleEnabled(published.definition, ruleId, action);
-
+		
 		Date effectiveAt = effectiveDate(asOf);
 		CareModelMember open = memberDAO.getOpenMember(patientId, careModelId);
 		if (open != null) {
@@ -120,7 +120,10 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 			}
 			return open;
 		}
-
+		
+		if (!canReenroll(patientId, careModelId, published.definition, effectiveAt))
+			return null;
+		
 		MemberStatus status = action == Action.AUTO_ENROLL ? MemberStatus.ACTIVE : MemberStatus.PENDING;
 		String source = action == Action.AUTO_ENROLL ? (backfill ? SOURCE_BACKFILL : SOURCE_AUTO) : SOURCE_CONFIRMATION;
 		String triggerType = backfill ? SOURCE_BACKFILL : source;
@@ -131,7 +134,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		    effectiveAt, null));
 		return memberDAO.saveCareModelMember(member);
 	}
-
+	
 	@Override
 	@Transactional
 	public int flagEnrollmentsForReview(Integer patientId, String sourceUuid, String reason, Date asOf) throws APIException {
@@ -153,7 +156,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		}
 		return flagged;
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModelMember confirmEnrollment(String memberUuid, String reason, Date asOf) throws APIException {
@@ -177,7 +180,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		member.setMembershipData(addConfirmation(member.getMembershipData(), effectiveAt, reason, member.getSourceUuid()));
 		return memberDAO.saveCareModelMember(member);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModelMember declineEnrollment(String memberUuid, String reason, Date asOf) throws APIException {
@@ -198,7 +201,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		    member.getSourceUuid()));
 		return memberDAO.saveCareModelMember(member);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModelMember enrollManually(Integer patientId, Integer careModelId, String reason, Date asOf)
@@ -211,7 +214,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		if (!manual.path("enabled").asBoolean(false)) {
 			throw new APIException("Manual enrollment is disabled for this Care Model");
 		}
-
+		
 		Date effectiveAt = effectiveDate(asOf);
 		CareModelMember open = memberDAO.getOpenMember(patientId, careModelId);
 		if (open != null) {
@@ -221,14 +224,37 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 			}
 			return open;
 		}
-
+		
+		if (!canReenroll(patientId, careModelId, published.definition, effectiveAt))
+			throw new APIException("Reenrollment is disabled or its cooldown has not elapsed");
+		
 		CareModelMember member = newMember(patientId, careModelId, MemberStatus.ACTIVE, SOURCE_MANUAL, null,
 		    memberDAO.getNextEpisodeNumber(patientId, careModelId), effectiveAt);
 		member.setMembershipData(newMembershipData(published.version, null, SOURCE_MANUAL, null, "ENROLLED", effectiveAt,
 		    reason));
 		return memberDAO.saveCareModelMember(member);
 	}
-
+	
+	private boolean canReenroll(Integer patientId, Integer modelId, JsonNode definition, Date asOf) {
+		java.util.List<CareModelMember> episodes = memberDAO.getMembersByPatientAndModel(patientId, modelId);
+		CareModelMember latest = null;
+		for (CareModelMember episode : episodes) {
+			if (Boolean.TRUE.equals(episode.getVoided()))
+				continue;
+			if (latest == null || episode.getEpisodeNumber() > latest.getEpisodeNumber())
+				latest = episode;
+		}
+		if (latest == null)
+			return true;
+		JsonNode policy = definition.path("enrollment").path("reenrollment");
+		if (!policy.path("enabled").asBoolean(false) || latest.getDateCompleted() == null)
+			return false;
+		long cooldown = policy.path("cooldownDays").asLong(0);
+		if (cooldown < 0 || cooldown > 3650)
+			throw new APIException("Invalid reenrollment cooldown");
+		return asOf.getTime() >= latest.getDateCompleted().getTime() + cooldown * 86400000L;
+	}
+	
 	@Override
 	@Transactional
 	public CareModelMember enrollManually(String patientUuid, String modelCodeOrUuid, String reason, Date asOf)
@@ -242,7 +268,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		}
 		return enrollManually(patient.getPatientId(), model.getId(), reason, asOf);
 	}
-
+	
 	@Override
 	@Transactional
 	public CareModelMember transitionEnrollment(String memberUuid, MemberStatus newStatus, String reason, Date asOf)
@@ -262,7 +288,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 			return member;
 		}
 		assertTransition(member.getStatus(), newStatus);
-
+		
 		Date effectiveAt = effectiveDate(asOf);
 		member.setStatus(newStatus);
 		if (newStatus == MemberStatus.COMPLETED || newStatus == MemberStatus.WITHDRAWN) {
@@ -273,7 +299,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		member.setMembershipData(appendHistory(member.getMembershipData(), historyType(newStatus), effectiveAt, reason, null));
 		return memberDAO.saveCareModelMember(member);
 	}
-
+	
 	private PublishedModel lockModel(Integer careModelId) {
 		CareModel model = careModelDAO.getCareModelByIdForUpdate(careModelId);
 		if (model == null) {
@@ -289,19 +315,19 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		assertText(envelope.getPublished().getVersion(), "Published definition version is missing");
 		return new PublishedModel(model, envelope.getPublished().getVersion(), envelope.getPublished().getDefinition());
 	}
-
+	
 	private CareModel findModel(String codeOrUuid) {
 		return codeOrUuid.matches("^[0-9a-fA-F-]{36}$") ? careModelDAO.getCareModelByUuid(codeOrUuid) : careModelDAO
 		        .getCareModelByCode(codeOrUuid);
 	}
-
+	
 	private void authorizeCommand(Integer patientId, CareModel model) {
 		if (commandAuthorizer == null) {
 			throw new APIException("Care Model membership is not authorized");
 		}
 		commandAuthorizer.authorize(patientId, model);
 	}
-
+	
 	private void assertTransition(MemberStatus current, MemberStatus target) {
 		boolean allowed = current == MemberStatus.ACTIVE
 		        && (target == MemberStatus.SUSPENDED || target == MemberStatus.COMPLETED || target == MemberStatus.WITHDRAWN)
@@ -311,7 +337,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 			throw new APIException("Membership transition from " + current + " to " + target + " is not allowed");
 		}
 	}
-
+	
 	private String historyType(MemberStatus status) {
 		switch (status) {
 			case ACTIVE:
@@ -326,7 +352,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 				throw new APIException("Unsupported membership transition: " + status);
 		}
 	}
-
+	
 	private void assertRuleEnabled(JsonNode definition, String ruleId, Action action) {
 		JsonNode enrollment = definition.path("enrollment");
 		if (!enrollment.path("enabled").asBoolean(false)) {
@@ -339,7 +365,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		}
 		throw new APIException("Rule '" + ruleId + "' is not a published " + action + " rule");
 	}
-
+	
 	private CareModelMember newMember(Integer patientId, Integer careModelId, MemberStatus status, String source,
 	        String sourceUuid, int episodeNumber, Date effectiveAt) {
 		CareModelMember member = new CareModelMember();
@@ -355,7 +381,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		}
 		return member;
 	}
-
+	
 	private void activate(CareModelMember member, String source, String ruleId, String version, String sourceUuid,
 	        Date effectiveAt, String reason) {
 		member.setStatus(MemberStatus.ACTIVE);
@@ -366,7 +392,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		member.setMembershipData(updateEnrollmentData(member.getMembershipData(), version, ruleId, source, sourceUuid,
 		    effectiveAt, reason));
 	}
-
+	
 	private String newMembershipData(String version, String ruleId, String triggerType, String sourceUuid,
 	        String historyType, Date at, String reason) {
 		ObjectNode root = objectMapper.createObjectNode();
@@ -384,7 +410,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		appendHistory(root.putArray("history"), historyType, at, reason, sourceUuid);
 		return writeJson(root);
 	}
-
+	
 	private String updateEnrollmentData(String json, String version, String ruleId, String triggerType, String sourceUuid,
 	        Date at, String reason) {
 		ObjectNode root = readMembershipData(json);
@@ -401,7 +427,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		appendHistory(history(root), "ENROLLED", at, reason, sourceUuid);
 		return writeJson(root);
 	}
-
+	
 	private String addConfirmation(String json, Date at, String reason, String sourceUuid) {
 		ObjectNode root = readMembershipData(json);
 		ObjectNode confirmation = root.with("enrollment").putObject("confirmation");
@@ -413,13 +439,13 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		appendHistory(history(root), "ENROLLED", at, reason, sourceUuid);
 		return writeJson(root);
 	}
-
+	
 	private String appendHistory(String json, String type, Date at, String reason, String sourceUuid) {
 		ObjectNode root = readMembershipData(json);
 		appendHistory(history(root), type, at, reason, sourceUuid);
 		return writeJson(root);
 	}
-
+	
 	private boolean hasReviewFlag(String json, String sourceUuid) {
 		for (JsonNode event : history(readMembershipData(json))) {
 			if ("FLAGGED_FOR_REVIEW".equals(event.path("type").asText())
@@ -429,7 +455,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		}
 		return false;
 	}
-
+	
 	private void appendHistory(ArrayNode history, String type, Date at, String reason, String sourceUuid) {
 		while (history.size() >= MAX_HISTORY) {
 			history.remove(0);
@@ -448,12 +474,12 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 			event.put("sourceUuid", sourceUuid);
 		}
 	}
-
+	
 	private ArrayNode history(ObjectNode root) {
 		JsonNode history = root.get("history");
 		return history instanceof ArrayNode ? (ArrayNode) history : root.putArray("history");
 	}
-
+	
 	private ObjectNode readMembershipData(String json) {
 		try {
 			JsonNode parsed = objectMapper.readTree(json);
@@ -469,7 +495,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 			throw new APIException("Cannot parse membership provenance", e);
 		}
 	}
-
+	
 	private String writeJson(ObjectNode root) {
 		try {
 			return objectMapper.writeValueAsString(root);
@@ -478,7 +504,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 			throw new APIException("Cannot serialize membership provenance", e);
 		}
 	}
-
+	
 	private CareModelMember getMember(String uuid) {
 		CareModelMember member = memberDAO.getCareModelMemberByUuid(uuid);
 		if (member == null || member.getVoided()) {
@@ -486,7 +512,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		}
 		return member;
 	}
-
+	
 	private CareModelMember getMemberForUpdate(String uuid) {
 		CareModelMember member = memberDAO.getCareModelMemberByUuidForUpdate(uuid);
 		if (member == null || Boolean.TRUE.equals(member.getVoided())) {
@@ -494,61 +520,61 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		}
 		return member;
 	}
-
+	
 	private void assertPendingConfirmation(CareModelMember member) {
 		if (member.getStatus() != MemberStatus.PENDING || !SOURCE_CONFIRMATION.equals(member.getEnrollmentSource())) {
 			throw new APIException("Only pending confirmation proposals can be confirmed or declined");
 		}
 	}
-
+	
 	private void assertIds(Integer patientId, Integer careModelId) {
 		if (patientId == null || careModelId == null) {
 			throw new APIException("patientId and careModelId are required");
 		}
 	}
-
+	
 	private void assertSourceUuid(String sourceUuid) {
 		assertText(sourceUuid, "Source UUID is required for rule-driven enrollment");
 		if (sourceUuid.length() > 38) {
 			throw new APIException("Source UUID must be at most 38 characters");
 		}
 	}
-
+	
 	private void assertReason(String reason) {
 		assertText(reason, "An audited reason is required");
 		if (reason.length() > 500) {
 			throw new APIException("Reason must be at most 500 characters");
 		}
 	}
-
+	
 	private void assertText(String value, String message) {
 		if (value == null || value.trim().isEmpty()) {
 			throw new APIException(message);
 		}
 	}
-
+	
 	private Date effectiveDate(Date asOf) {
 		return asOf == null ? new Date() : new Date(asOf.getTime());
 	}
-
+	
 	private String currentActor() {
 		return actorProvider == null ? null : actorProvider.getCurrentActor();
 	}
-
+	
 	private String formatDate(Date date) {
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 		format.setTimeZone(TimeZone.getTimeZone("UTC"));
 		return format.format(date);
 	}
-
+	
 	private static final class PublishedModel {
-
+		
 		private final CareModel model;
-
+		
 		private final String version;
-
+		
 		private final JsonNode definition;
-
+		
 		private PublishedModel(CareModel model, String version, JsonNode definition) {
 			this.model = model;
 			this.version = version;

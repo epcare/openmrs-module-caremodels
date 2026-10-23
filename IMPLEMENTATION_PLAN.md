@@ -43,3 +43,28 @@ This plan follows the 2026-10-21 v2 engineering baseline. Work is split into foc
 - Record performance measurements for membership, workspace and common resolver calls.
 
 No phase may add a third Care Models table, facility-scoped runtime behavior, JSON-embedded privileges, chart-open rule evaluation, or resolver work on the membership-list path.
+
+## 2026-10-22 — Combined implementation status
+
+The widget and enrollment branches have been reconciled. Preserve the detailed comparison and
+acceptance evidence in `docs/MERGE_FUNCTIONALITY_REVIEW.md` when sequencing follow-up work.
+
+- Phases 1–2: access restrictions, draft/publish row locks, import integrity, metadata write boundaries,
+  nested-reference/layout checks and REST query dispatch are present. MySQL multi-session
+  concurrency and deployment verification remain outstanding.
+- Phase 3: deterministic three-valued rules, after-commit clinical-event advice, event matching and
+  idempotent auto/proposal/manual/confirm/decline service flows are present. Source-correction review
+  history, audited generic transitions, reenrollment cooldown policy and restartable bounded
+  reconciliation/backfill are implemented and regression tested. Event delivery remains synchronous/in-process;
+  scheduled recovery supplies replay rather than durable delivery.
+- Phase 4: eight approved typed resolvers, sixteen widget type IDs, result schemas and safe selected-tab
+  form/action/pathway descriptors are present. Clinical frontend launch/action adapters remain disabled;
+  the shared Spring extension registry, versioned contracts, transaction deadlines and aggregate resolver
+  counters are implemented. Deployment performance checks remain open.
+- Phase 5: combined automated tests and packaging are verified in the merge review. Authenticated
+  HTTP, MySQL 8 concurrency/migrations, installed event advice, frontend integration and p95 targets
+  must be verified in the target environment before claiming full MVP acceptance.
+
+No recovery work may introduce a third module-owned table or move eligibility evaluation into
+membership/workspace discovery. Do not enable blocked clinical algorithms or workflow actions to
+make a capability list appear complete.

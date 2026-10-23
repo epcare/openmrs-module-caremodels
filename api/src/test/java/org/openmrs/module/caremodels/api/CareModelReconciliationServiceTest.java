@@ -56,6 +56,7 @@ public class CareModelReconciliationServiceTest {
 	public void setup() {
 		service = new CareModelReconciliationServiceImpl();
 		service.setReconciliationDAO(reconciliationDAO);
+		service.setMemberDAO(org.mockito.Mockito.mock(org.openmrs.module.caremodels.api.db.CareModelMemberDAO.class));
 		service.setCareModelDAO(modelDAO);
 		service.setRuleEngine(new EnrollmentRuleEngine());
 		service.setEnrollmentService(enrollmentService);
@@ -100,20 +101,15 @@ public class CareModelReconciliationServiceTest {
 		assertEquals(Action.AUTO_ENROLL, enrollmentService.calls.get(0).action);
 	}
 
-	@Test
-	public void shouldContinueAfterMalformedModelAndFinishCursor() throws Exception {
+	@Test(expected = IllegalStateException.class)
+	public void shouldFailWithoutReturningAnAdvancedCursorForMalformedModel() throws Exception {
 		reconciliationDAO.patientIds.add(9);
 		CareModel malformed = new CareModel();
 		malformed.setId(2);
 		malformed.setCode("malformed");
 		malformed.setConfiguration("{");
 		modelDAO.models.add(malformed);
-
-		EnrollmentReconciliationResult result = service.reconcile(null, null, NOW);
-		assertEquals(1, result.getProcessedPatients());
-		assertEquals(1, result.getFailedEvaluations());
-		assertEquals(Integer.valueOf(9), result.getNextAfterPatientId());
-		assertTrue(!result.isHasMore());
+		service.reconcile(null, null, NOW);
 	}
 
 	@Test(expected = APIException.class)

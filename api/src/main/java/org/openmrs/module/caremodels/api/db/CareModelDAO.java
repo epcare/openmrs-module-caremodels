@@ -29,11 +29,11 @@ public interface CareModelDAO {
 
 	/** Locks one model row to serialize membership episode creation for that model. */
 	CareModel getCareModelByIdForUpdate(Integer id);
-	
+
 	CareModel getCareModelByUuid(String uuid);
 	
 	CareModel getCareModelByCode(String code);
-	
+
 	/**
 	 * Loads a model while holding a database write lock for the remainder of the current
 	 * transaction. Draft and publish operations use this method so the envelope revision check and
@@ -53,7 +53,7 @@ public interface CareModelDAO {
 
 	/** Published, non-retired models whose definitions may react to a clinical change. */
 	List<CareModel> getPublishedCareModelsForEnrollment();
-	
+
 	long getCareModelsCount(String qStr, CareModelStatus status, boolean includeRetired);
 	
 	void purgeCareModel(CareModel careModel);
@@ -70,4 +70,9 @@ public interface CareModelDAO {
 	 * Metadata projections for many models in one query; {@code configuration} is never selected.
 	 */
 	List<CareModelRef> getModelRefs(Collection<Integer> careModelIds);
+
+    default java.util.List<CareModel> getEnrollmentModelsAfter(int modelId, int limit) { throw new UnsupportedOperationException(); }
+    default java.util.List<Integer> getPatientIdsAfter(int patientId, int upperId, int limit) { throw new UnsupportedOperationException(); }
+    default int getMaximumPatientId() { throw new UnsupportedOperationException(); }
+    default org.openmrs.GlobalProperty getReconciliationCursorForUpdate() { throw new UnsupportedOperationException(); }
 }

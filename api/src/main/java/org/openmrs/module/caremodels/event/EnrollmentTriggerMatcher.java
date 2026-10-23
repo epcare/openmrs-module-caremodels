@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 /** Filters a clinical event against enrollment triggers in one published model definition. */
 public class EnrollmentTriggerMatcher {
-
+	
 	public boolean matches(JsonNode definition, ClinicalChangeEvent event) {
 		if (definition == null || !definition.path("enrollment").path("enabled").asBoolean(false)) {
 			return false;
@@ -24,7 +24,22 @@ public class EnrollmentTriggerMatcher {
 		}
 		return false;
 	}
-
+	
+	/** Corrections also affect a model that subscribed only to the original save event. */
+	public boolean matchesCorrection(JsonNode definition, ClinicalChangeEvent event) {
+		String type = event.getTriggerType().name();
+		if (!(type.endsWith("_CHANGED") || type.endsWith("_VOIDED")))
+			return false;
+		String family = type.substring(0, type.indexOf('_'));
+		for (JsonNode trigger : definition.path("enrollment").path("triggers")) {
+			String reference = resolveReferenceUuid(definition.path("terminology"), trigger, event.getTriggerType());
+			if (trigger.path("type").asText().startsWith(family + "_")
+			        && (reference == null || reference.equals(event.getReferenceUuid())))
+				return true;
+		}
+		return false;
+	}
+	
 	private String resolveReferenceUuid(JsonNode terminology, JsonNode trigger, ClinicalChangeEvent.TriggerType type) {
 		String kind;
 		String specificAlias;
@@ -39,6 +54,6 @@ public class EnrollmentTriggerMatcher {
 			specificAlias = "conceptAlias";
 		}
 		String alias = trigger.path(specificAlias).asText(trigger.path("alias").asText(null));
-		return alias == null ? null : terminology.path(kind).path(alias).asText(null);
+		return alias == null ? null : terminology.path(kind).path(alias).asText("__undeclared__");
 	}
 }

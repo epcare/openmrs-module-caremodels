@@ -153,6 +153,24 @@ public class ModelOperationResource extends DelegatingCrudResource<ModelOperatio
 	}
 	
 	@Override
+	public DelegatingResourceDescription getCreatableProperties() {
+		DelegatingResourceDescription description = new DelegatingResourceDescription();
+		description.addRequiredProperty("operation");
+		description.addProperty("code");
+		description.addProperty("name");
+		description.addProperty("description");
+		description.addProperty("privilege");
+		description.addProperty("definition");
+		description.addProperty("envelope");
+		description.addProperty("expectedRevision");
+		description.addProperty("version");
+		description.addProperty("sourceCode");
+		description.addProperty("newCode");
+		description.addProperty("newName");
+		return description;
+	}
+	
+	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		// request/response fields mirror the delegate's properties
 		DelegatingResourceDescription description = new DelegatingResourceDescription();

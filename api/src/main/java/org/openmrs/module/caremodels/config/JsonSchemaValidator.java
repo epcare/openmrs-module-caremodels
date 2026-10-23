@@ -36,7 +36,8 @@ public class JsonSchemaValidator {
 	public static final String SCHEMA_BASE_URI = "https://epcare.openmrs.org/schemas/";
 	
 	public enum SchemaType {
-		MODEL_DEFINITION("model-definition.schema.json"), STORAGE_ENVELOPE("storage-envelope.schema.json"), MEMBERSHIP_DATA(
+		DATA_SOURCE("data-source.schema.json"), CLINICAL_RESULT("clinical-result.schema.json"), MODEL_DEFINITION(
+		        "model-definition.schema.json"), STORAGE_ENVELOPE("storage-envelope.schema.json"), MEMBERSHIP_DATA(
 		        "membership-data.schema.json");
 		
 		private final String resource;

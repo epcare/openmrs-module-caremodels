@@ -1,0 +1,38 @@
+{
+  "type": "order-query",
+  "resolverVersion": "1.0.0",
+  "assessedAt": "2026-10-21T12:00:00Z",
+  "provenance": "OpenMRS service API",
+  "status": "ok",
+  "records": [
+    {
+      "uuid": "example-revised-order",
+      "action": "REVISE",
+      "dateActivated": "2026-10-20T10:00:00Z",
+      "effectiveStartDate": "2026-10-20T10:00:00Z",
+      "effectiveStopDate": null,
+      "autoExpireDate": null,
+      "activeAtAssessment": true,
+      "previousOrderUuid": "example-stopped-order",
+      "orderTypeUuid": "example-order-type",
+      "drugUuid": "example-drug",
+      "drugName": "Example drug (test only)"
+    }
+  ],
+  "availableFields": [
+    "uuid",
+    "action",
+    "dateActivated",
+    "effectiveStartDate",
+    "effectiveStopDate",
+    "autoExpireDate",
+    "activeAtAssessment",
+    "previousOrderUuid",
+    "orderTypeUuid",
+    "drugUuid",
+    "drugName"
+  ],
+  "returnedCount": 1,
+  "truncated": false,
+  "total": null
+}

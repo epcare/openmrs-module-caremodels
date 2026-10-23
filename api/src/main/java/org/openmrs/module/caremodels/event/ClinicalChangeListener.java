@@ -7,6 +7,6 @@ package org.openmrs.module.caremodels.event;
 
 /** Receives clinical changes only after their enclosing transaction commits. */
 public interface ClinicalChangeListener {
-
+	
 	void onClinicalChange(ClinicalChangeEvent event);
 }

@@ -53,14 +53,38 @@ public class ReconciliationOperationResourceTest {
 		assertEquals(Boolean.TRUE, response.getHasMore());
 	}
 
+	@Test
+	public void postCreationMustBindCursorLimitAndEvaluationTime() {
+		Date asOf = new Date(1761033600000L);
+		org.openmrs.module.webservices.rest.SimpleObject request = new org.openmrs.module.webservices.rest.SimpleObject();
+		request.add("afterPatientId", 40);
+		request.add("limit", 10);
+		request.add("asOf", asOf);
+		try (org.mockito.MockedStatic<org.openmrs.api.context.Context> context =
+                org.mockito.Mockito.mockStatic(org.openmrs.api.context.Context.class)) {
+            resource.save(resource.convert(request));
+        }
+		assertEquals(Integer.valueOf(40), service.afterPatientId);
+		assertEquals(Integer.valueOf(10), service.limit);
+		assertEquals(asOf, service.asOf);
+	}
+
 	private static final class RecordingService implements CareModelReconciliationService {
+
+		@Override
+		public int reconcileNextBatch(int limit) {
+			throw new UnsupportedOperationException();
+		}
 
 		private Integer afterPatientId;
 
 		private Integer limit;
 
+		private Date asOf;
+
 		@Override
 		public EnrollmentReconciliationResult reconcile(Integer cursor, Integer batchLimit, Date asOf) {
+			this.asOf = asOf;
 			afterPatientId = cursor;
 			limit = batchLimit;
 			EnrollmentReconciliationResult result = new EnrollmentReconciliationResult();

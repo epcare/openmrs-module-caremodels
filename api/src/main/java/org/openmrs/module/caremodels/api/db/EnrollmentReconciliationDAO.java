@@ -9,6 +9,6 @@ import java.util.List;
 
 /** Bounded cursor scan over core OpenMRS patients; no module-owned work queue is required. */
 public interface EnrollmentReconciliationDAO {
-
+	
 	List<Integer> getPatientIdsAfter(Integer afterPatientId, int limit);
 }

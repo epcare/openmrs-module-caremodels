@@ -5,8 +5,20 @@
  */
 package org.openmrs.module.caremodels.web.resource;
 
+import java.util.Date;
+
 /** Request and response fields for one bounded reconciliation batch. */
 public class ReconciliationOperationRequest {
+
+	private Date asOf;
+
+	public Date getAsOf() {
+		return asOf;
+	}
+
+	public void setAsOf(Date asOf) {
+		this.asOf = asOf;
+	}
 
 	private Integer afterPatientId;
 

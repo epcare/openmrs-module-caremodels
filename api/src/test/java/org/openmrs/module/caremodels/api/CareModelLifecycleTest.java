@@ -241,6 +241,10 @@ public class CareModelLifecycleTest extends BaseModuleContextSensitiveTest {
 		((ObjectNode) envelope.path("published").path("definition").path("terminology")).putObject("concepts").put(
 		    "missing_concept", "00000000-0000-0000-0000-000000000000");
 		
+		// Keep integrity valid so this regression actually reaches local-reference validation.
+		((ObjectNode) envelope.path("published")).put("checksum",
+		    CanonicalJson.sha256(envelope.path("published").path("definition")));
+		
 		try {
 			service.importModel("LIFECYCLE_I1_IMPORT", "Imported", testPrivilege, envelope.toString());
 			Assert.fail("import with unresolvable reference should be rejected");
@@ -293,5 +297,43 @@ public class CareModelLifecycleTest extends BaseModuleContextSensitiveTest {
 		ValidationResult result = service.validateDraft(invalid);
 		Assert.assertFalse(result.isValid());
 		Assert.assertTrue(result.toString().contains("schemaVersion"));
+	}
+	
+	@Test
+	public void widgetDefinitionShouldSurviveDraftValidationPublishAndAuthorizedRead() throws Exception {
+		ObjectNode definition = (ObjectNode) mapper.readTree(minimalDefinition("Widget lifecycle"));
+		((ObjectNode) definition.path("enrollment")).put("enabled", true);
+		((ObjectNode) definition.path("enrollment").path("manualEnrollment")).put("enabled", true);
+		ObjectNode source = ((ObjectNode) definition.path("dataSources")).putObject("summary");
+		source.put("type", "registered").put("resolverId", "patient-summary").put("resolverVersion", "1.0.0")
+		        .put("resultType", "TABLE");
+		source.putArray("fields").add("gender");
+		ObjectNode widget = ((com.fasterxml.jackson.databind.node.ArrayNode) definition.path("workspace").path("tabs")
+		        .get(0).path("widgets")).addObject();
+		widget.put("id", "summary-widget").put("type", "patient-summary").put("dataSource", "summary");
+		CareModel model = service.createCareModel("WIDGET_LIFECYCLE", "Widget lifecycle", null, testPrivilege,
+		    definition.toString());
+		definition.with("metadata").with("display").put("label", "Saved edit");
+		service.saveDraft(model.getCode(), definition.toString(), 1);
+		Assert.assertTrue(service.validateDraft(definition.toString()).isValid());
+		service.publishCareModel(model.getCode(), "1.0.0", 2);
+		org.openmrs.Patient patient = Context.getPatientService().getPatient(2);
+		CareModelEnrollmentService enrollments = Context.getService(CareModelEnrollmentService.class);
+		org.openmrs.module.caremodels.model.CareModelMember member = enrollments.enrollManually(patient.getId(),
+		    model.getId(), "Widget integration test", new java.util.Date());
+		Assert.assertEquals(member.getUuid(),
+		    enrollments.enrollManually(patient.getId(), model.getId(), "Idempotent replay", new java.util.Date()).getUuid());
+		Assert.assertEquals(1, mapper.readTree(member.getMembershipData()).path("history").size());
+		
+		CareModelAccessService.AuthorizedAccess authorized = Context.getService(CareModelAccessService.class)
+		        .authorizeWorkspace(patient.getUuid(), model.getCode(), "overview");
+		Assert.assertEquals("Saved edit", authorized.getPublishedDefinition().path("metadata").path("display").path("label")
+		        .asText());
+		Assert.assertEquals("summary", authorized.getTabDefinition().path("widgets").get(0).path("dataSource").asText());
+		com.fasterxml.jackson.databind.JsonNode result = new org.openmrs.module.caremodels.resolver.DataResolverRegistry()
+		        .getResolver("patient-summary").resolve(patient.getId(),
+		            authorized.getPublishedDefinition().path("dataSources").path("summary"), null);
+		Assert.assertEquals(patient.getGender(), mapper.readTree(result.toString()).path("fields").path("gender").asText());
+		Assert.assertEquals(Integer.valueOf(3), service.getCareModelByCode(model.getCode()).getRevision());
 	}
 }

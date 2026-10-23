@@ -10,20 +10,20 @@ import java.util.Date;
 import org.openmrs.api.context.Context;
 
 abstract class ClinicalChangeAdviceSupport {
-
+	
 	private ClinicalChangePublisher publisher;
-
+	
 	ClinicalChangeAdviceSupport() {
 	}
-
+	
 	ClinicalChangeAdviceSupport(ClinicalChangePublisher publisher) {
 		this.publisher = publisher;
 	}
-
+	
 	void publish(ClinicalChangeEvent.TriggerType type, String patientUuid, String sourceUuid, String referenceUuid) {
 		publish(type, patientUuid, sourceUuid, referenceUuid, null);
 	}
-
+	
 	void publish(ClinicalChangeEvent.TriggerType type, String patientUuid, String sourceUuid, String referenceUuid,
 	        String reviewSourceUuid) {
 		if (patientUuid != null && sourceUuid != null && referenceUuid != null) {
@@ -31,7 +31,7 @@ abstract class ClinicalChangeAdviceSupport {
 			    new ClinicalChangeEvent(type, patientUuid, sourceUuid, referenceUuid, new Date(), reviewSourceUuid));
 		}
 	}
-
+	
 	private ClinicalChangePublisher publisher() {
 		if (publisher == null) {
 			publisher = Context.getRegisteredComponent("caremodels.ClinicalChangePublisher", ClinicalChangePublisher.class);

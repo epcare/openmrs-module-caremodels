@@ -73,6 +73,17 @@ public interface CareModelAccessService extends OpenmrsService {
 	 */
 	class AuthorizedAccess {
 		
+		private com.fasterxml.jackson.databind.JsonNode memberPathway;
+		
+		public com.fasterxml.jackson.databind.JsonNode getMemberPathway() {
+			return memberPathway;
+		}
+		
+		/** Internal authorized projection only; no metadata is accepted from a REST request. */
+		public void setMemberPathway(com.fasterxml.jackson.databind.JsonNode memberPathway) {
+			this.memberPathway = memberPathway;
+		}
+		
 		private final String patientUuid;
 		
 		private final String modelCode;

@@ -30,7 +30,7 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 	private CareModelMemberDAO dao;
 	
 	private CareModelEnrollmentService enrollmentService;
-
+	
 	public CareModelMemberDAO getDao() {
 		return dao;
 	}
@@ -42,7 +42,7 @@ public class CareModelMemberServiceImpl extends BaseOpenmrsService implements Ca
 	public void setEnrollmentService(CareModelEnrollmentService enrollmentService) {
 		this.enrollmentService = enrollmentService;
 	}
-
+	
 	@Override
 	@Transactional(readOnly = true)
 	public CareModelMember getMember(Integer careModelMemberId) throws APIException {

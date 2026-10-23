@@ -35,9 +35,10 @@ public class ReconciliationOperationResource extends DelegatingCrudResource<Reco
 
 	@Override
 	public ReconciliationOperationRequest save(ReconciliationOperationRequest request) {
-		EnrollmentReconciliationResult batch = service().reconcile(request.getAfterPatientId(), request.getLimit(),
-		    new Date());
+		Date asOf = request.getAsOf() == null ? new Date() : request.getAsOf();
+		EnrollmentReconciliationResult batch = service().reconcile(request.getAfterPatientId(), request.getLimit(), asOf);
 		ReconciliationOperationRequest result = new ReconciliationOperationRequest();
+		result.setAsOf(asOf);
 		result.setNextAfterPatientId(batch.getNextAfterPatientId());
 		result.setProcessedPatients(batch.getProcessedPatients());
 		result.setEvaluatedModels(batch.getEvaluatedModels());
@@ -69,8 +70,18 @@ public class ReconciliationOperationResource extends DelegatingCrudResource<Reco
 	}
 
 	@Override
+	public DelegatingResourceDescription getCreatableProperties() {
+		DelegatingResourceDescription description = new DelegatingResourceDescription();
+		description.addProperty("asOf");
+		description.addProperty("afterPatientId");
+		description.addProperty("limit");
+		return description;
+	}
+
+	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
+		description.addProperty("asOf");
 		description.addProperty("afterPatientId");
 		description.addProperty("limit");
 		description.addProperty("nextAfterPatientId");

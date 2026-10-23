@@ -11,6 +11,6 @@ package org.openmrs.module.caremodels.api.impl;
 
 /** Supplies the authenticated actor identifier written into membership provenance. */
 public interface EnrollmentActorProvider {
-
+	
 	String getCurrentActor();
 }

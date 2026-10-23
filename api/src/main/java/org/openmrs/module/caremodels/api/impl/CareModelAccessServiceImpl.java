@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.caremodels.api.impl;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -173,8 +174,10 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 		if (envelope.getPublished() == null || envelope.getPublished().getDefinition() == null) {
 			throw new APIException("Care Model not found or not authorized");
 		}
-
+		
 		JsonNode published = envelope.getPublished().getDefinition();
+		if (!published.isObject())
+			throw new APIException("Care Model not found or not authorized");
 		
 		JsonNode workspaceNode = published.path("workspace");
 		String resolvedTabId = tabId;
@@ -190,6 +193,17 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			throw new APIException("Requested tab is not part of this Care Model");
 		}
 		
+		if (tab.has("visibilityRule")) {
+			org.openmrs.module.caremodels.event.EnrollmentRuleEvidenceFactory evidence = Context.getRegisteredComponent(
+			    "caremodels.EnrollmentRuleEvidenceFactory",
+			    org.openmrs.module.caremodels.event.EnrollmentRuleEvidenceFactory.class);
+			java.util.Date asOf = new java.util.Date();
+			if (evidence == null
+			        || new org.openmrs.module.caremodels.rule.RuleExpressionEvaluator().evaluate(tab.path("visibilityRule"),
+			            evidence.create(patient.getId(), published, asOf), asOf) != org.openmrs.module.caremodels.rule.TriState.TRUE)
+				throw new APIException("Requested tab is not authorized");
+		}
+		
 		// tab summary (id + label only): lets the frontend render the inner-tab strip without
 		// ever receiving widget definitions of tabs it has not opened
 		com.fasterxml.jackson.databind.node.ArrayNode tabs = new com.fasterxml.jackson.databind.node.ArrayNode(
@@ -200,9 +214,40 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			summary.put("label", authoredTab.path("label").asText());
 		}
 		
-		return new AuthorizedAccess(resolvedPatientUuid, model.getCode(), model.getUuid(), member.getUuid(), published, tab,
-		        tabs);
+		AuthorizedAccess authorized = new AuthorizedAccess(resolvedPatientUuid, model.getCode(), model.getUuid(),
+		        member.getUuid(), published, tab, tabs);
+		boolean pathwayRequested = false;
+		for (JsonNode widget : tab.path("widgets"))
+			pathwayRequested |= "care-plan".equals(widget.path("type").asText());
+		if (pathwayRequested)
+			authorized.setMemberPathway(readMemberPathway(member, published));
+		return authorized;
 	}
+	
+	private JsonNode readMemberPathway(CareModelMember member, JsonNode published) {
+        com.fasterxml.jackson.databind.node.ObjectNode result = objectMapper.createObjectNode().put("status", "insufficient-data");
+        if (!published.path("pathways").path("enabled").asBoolean()) return result.put("reason", "pathway-not-enabled");
+        try {
+            if (member.getMembershipData() == null) return result.put("reason", "no-recorded-stage");
+            JsonNode metadata = objectMapper.readTree(member.getMembershipData());
+            if (!new org.openmrs.module.caremodels.config.JsonSchemaValidator().validate(metadata,
+                org.openmrs.module.caremodels.config.JsonSchemaValidator.SchemaType.MEMBERSHIP_DATA).isValid())
+                return result.put("reason", "invalid-membership-metadata");
+            JsonNode pathway = metadata.path("pathway");
+            for (JsonNode stage : published.path("pathways").path("stages")) {
+                if (stage.path("id").asText().equals(pathway.path("stage").asText()) && pathway.hasNonNull("enteredAt")) {
+                    if (java.time.Instant.parse(pathway.path("enteredAt").asText()).isAfter(java.time.Instant.now()))
+                        return result.put("reason", "future-stage-date");
+                    return result.put("status", "recorded").put("stage", stage.path("id").asText())
+                        .put("label", stage.path("label").asText()).put("enteredAt", pathway.path("enteredAt").asText())
+                        .put("provenance", "care_model_member.membership_data.pathway");
+                }
+            }
+        } catch (IOException | IllegalArgumentException | java.time.format.DateTimeParseException e) {
+            return result.put("reason", "invalid-membership-metadata");
+        }
+        return result.put("reason", "no-recorded-stage");
+    }
 	
 	private JsonNode findTab(JsonNode published, String tabId) {
 		JsonNode tabs = published.path("workspace").path("tabs");

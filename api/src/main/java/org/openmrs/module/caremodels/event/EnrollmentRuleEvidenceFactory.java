@@ -13,8 +13,8 @@ import org.openmrs.module.caremodels.rule.RuleEvidenceProvider;
 
 /** Creates patient-scoped evidence providers for one published model evaluation. */
 public interface EnrollmentRuleEvidenceFactory {
-
+	
 	Integer resolvePatientId(String patientUuid);
-
+	
 	RuleEvidenceProvider create(Integer patientId, JsonNode definition, Date asOf);
 }

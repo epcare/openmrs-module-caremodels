@@ -1,0 +1,30 @@
+{
+  "type": "conditions",
+  "resolverVersion": "1.0.0",
+  "assessedAt": "2026-10-21T12:00:00Z",
+  "provenance": "OpenMRS service API",
+  "status": "ok",
+  "records": [
+    {
+      "uuid": "example-condition",
+      "conceptUuid": null,
+      "name": "Recorded non-coded condition",
+      "clinicalStatus": "INACTIVE",
+      "verificationStatus": "CONFIRMED",
+      "onsetDate": "2025-01-01T00:00:00Z",
+      "endDate": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "availableFields": [
+    "uuid",
+    "conceptUuid",
+    "name",
+    "clinicalStatus",
+    "verificationStatus",
+    "onsetDate",
+    "endDate"
+  ],
+  "returnedCount": 1,
+  "truncated": false,
+  "total": null
+}

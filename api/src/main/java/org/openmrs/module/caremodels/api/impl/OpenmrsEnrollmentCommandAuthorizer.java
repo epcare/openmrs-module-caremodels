@@ -13,7 +13,7 @@ import org.openmrs.module.caremodels.security.CareModelsPrivileges;
 
 /** Fail-closed OpenMRS privilege checks for clinician-initiated membership changes. */
 public class OpenmrsEnrollmentCommandAuthorizer implements EnrollmentCommandAuthorizer {
-
+	
 	@Override
 	public void authorize(Integer patientId, CareModel model) {
 		if (!Context.hasPrivilege(CareModelsPrivileges.VIEW_CARE_MODELS)) {

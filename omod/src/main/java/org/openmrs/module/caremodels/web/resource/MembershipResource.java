@@ -52,6 +52,12 @@ public class MembershipResource extends DelegatingCrudResource<CareModelMembersh
 		throw new UnsupportedOperationException("Memberships are listed per patient; use ?patient={uuid}");
 	}
 	
+	/** RESTWS dispatches requests containing q/patient/model/tab filters through search(). */
+	@Override
+	protected PageableResult doSearch(RequestContext context) throws ResponseException {
+		return doGetAll(context);
+	}
+	
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		String patientUuid = trimToNull(context.getParameter("patient"));

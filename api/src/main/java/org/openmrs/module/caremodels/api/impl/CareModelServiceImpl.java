@@ -136,14 +136,21 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 	
 	private JsonSchemaValidator schemaValidator = new JsonSchemaValidator(objectMapper);
 	
-	private SemanticValidator semanticValidator = new SemanticValidator(referenceChecker);
+	private org.openmrs.module.caremodels.resolver.DataResolverRegistry resolverRegistry = new org.openmrs.module.caremodels.resolver.DataResolverRegistry();
+	
+	private SemanticValidator semanticValidator = new SemanticValidator(referenceChecker, resolverRegistry);
+	
+	public void setResolverRegistry(org.openmrs.module.caremodels.resolver.DataResolverRegistry registry) {
+		resolverRegistry = registry;
+		semanticValidator = new SemanticValidator(referenceChecker, registry);
+	}
 	
 	/**
 	 * Overridable for tests; production uses the OpenMRS API-backed checker.
 	 */
 	public void setReferenceChecker(OpenmrsReferenceChecker referenceChecker) {
 		this.referenceChecker = referenceChecker;
-		this.semanticValidator = new SemanticValidator(referenceChecker);
+		this.semanticValidator = new SemanticValidator(referenceChecker, resolverRegistry);
 	}
 	
 	@Override
@@ -397,7 +404,7 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		}
 		return model;
 	}
-
+	
 	private StorageEnvelope readEnvelope(CareModel model) {
 		return StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
 	}

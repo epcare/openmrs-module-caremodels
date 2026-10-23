@@ -9,96 +9,74 @@
  */
 package org.openmrs.module.caremodels.resolver;
 
-import java.util.Collections;
-import java.util.List;
-
+import java.time.Clock;
+import java.time.Instant;
+import java.util.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import org.openmrs.Concept;
-import org.openmrs.ConceptDatatype;
-import org.openmrs.Obs;
+import org.openmrs.*;
 import org.openmrs.api.context.Context;
 
-/**
- * Latest non-voided observation for one concept. Bounded (maxResults), excludes voided data, and
- * returns typed values with provenance (observation uuid, effective time, units).
- */
+/** Bounded observation values. Keeps the original values[] wire contract. */
 public class LatestObservationResolver implements DataResolver {
+	
+	private final String id;
+	
+	private final Clock clock;
+	
+	public LatestObservationResolver() {
+		this("latest-observation", Clock.systemUTC());
+	}
+	
+	public LatestObservationResolver(String id, Clock clock) {
+		this.id = id;
+		this.clock = clock;
+	}
 	
 	@Override
 	public String getId() {
-		return "latest-observation";
+		return id;
 	}
 	
-	@Override
-	public JsonNode resolve(Integer patientId, JsonNode source, String resolvedConceptUuid) {
-		ObjectMapperHolder mapper = ObjectMapperHolder.INSTANCE;
-		ObjectNode result = mapper.get().createObjectNode();
-		result.put("type", getId());
-		result.put("concept", resolvedConceptUuid);
-		
-		if (resolvedConceptUuid == null) {
-			result.put("value", (String) null);
-			return result;
-		}
-		
-		Concept concept = Context.getConceptService().getConceptByUuid(resolvedConceptUuid);
-		if (concept == null) {
-			throw new IllegalArgumentException("Concept not found: " + resolvedConceptUuid);
-		}
-		
-		int maxResults = source.path("maxResults").asInt(1);
-		int windowDays = source.path("windowDays").asInt(0);
-		
-		List<Obs> obsList = Context.getObsService().getObservations(
-		    Collections.singletonList(Context.getPersonService().getPerson(patientId)), null,
-		    Collections.singletonList(concept), null, null, null, null, maxResults, null, null, null, false);
-		
-		ArrayNode values = result.putArray("values");
-		int returned = 0;
-		for (Obs obs : obsList) {
-			if (windowDays > 0 && obs.getObsDatetime() != null
-			        && obs.getObsDatetime().before(new java.util.Date(System.currentTimeMillis() - windowDays * 86400000L))) {
-				continue;
-			}
-			ObjectNode value = values.addObject();
-			value.put("obsUuid", obs.getUuid());
-			value.put("effectiveTime", obs.getObsDatetime() != null ? obs.getObsDatetime().toString() : null);
-			if (obs.getValueNumeric() != null) {
-				value.put("valueType", "NUMBER");
-				value.put("value", obs.getValueNumeric());
-			} else if (obs.getValueCoded() != null) {
-				value.put("valueType", "CODED");
-				value.put("value", obs.getValueCoded().getUuid());
-				value.put("valueName", obs.getValueCoded().getName().getName());
-			} else if (obs.getValueText() != null) {
-				value.put("valueType", "STRING");
-				value.put("value", obs.getValueText());
-			} else if (obs.getValueDatetime() != null) {
-				value.put("valueType", "DATE");
-				value.put("value", obs.getValueDatetime().toString());
-			}
-			returned++;
-			if (returned >= maxResults) {
-				break;
-			}
-		}
-		return result;
-	}
-	
-	/**
-	 * Shared lazy mapper holder; resolvers must not hold per-request state.
-	 */
-	private static class ObjectMapperHolder {
-		
-		private static final ObjectMapperHolder INSTANCE = new ObjectMapperHolder();
-		
-		private final com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-		
-		com.fasterxml.jackson.databind.ObjectMapper get() {
-			return mapper;
-		}
-	}
+	@Override public JsonNode resolve(Integer patientId, JsonNode source, String reference) {
+        Patient patient = ResolverSupport.patient(patientId);
+        if (reference == null) throw new IllegalArgumentException("A declared concept alias is required");
+        Concept concept = Context.getConceptService().getConceptByUuid(reference);
+        if (concept == null || concept.isRetired()) throw new IllegalArgumentException("Concept unavailable");
+        Instant now = clock.instant();
+        int limit = ResolverSupport.limit(source, id.equals("latest-observation") ? 1 : 100);
+        Date since = ResolverSupport.since(source, now, id.equals("latest-observation") ? 0 : 365);
+        List<Obs> observations = Context.getObsService().getObservations(Collections.singletonList(patient), null,
+            Collections.singletonList(concept), null, null, null, Arrays.asList("obsDatetime desc", "uuid asc"),
+            limit + 1, null, since, Date.from(now), false);
+        List<Obs> safe = new ArrayList<>();
+        for (Obs obs : observations) {
+            if (!Boolean.TRUE.equals(obs.getVoided()) && patient.getId().equals(obs.getPersonId())
+                    && concept.equals(obs.getConcept()) && ResolverSupport.inWindow(obs.getObsDatetime(), since, now)) safe.add(obs);
+        }
+        safe.sort(ResolverSupport.newest(Obs::getObsDatetime, Obs::getUuid));
+        ObjectNode result = ResolverSupport.result(id, now).put("concept", reference);
+        if (concept instanceof ConceptNumeric) result.put("units", ((ConceptNumeric) concept).getUnits());
+        ArrayNode values = result.putArray("values");
+        for (Obs obs : safe.subList(0, Math.min(limit, safe.size()))) {
+            ObjectNode value = values.addObject().put("obsUuid", obs.getUuid())
+                .put("effectiveTime", ResolverSupport.time(obs.getObsDatetime()));
+            String modifier = obs.getValueModifier();
+            if (obs.getValueNumeric() != null && modifier != null && !modifier.trim().isEmpty() && !"=".equals(modifier)) {
+                value.put("valueType", "STRING").put("value", modifier + obs.getValueNumeric());
+            } else if (obs.getValueNumeric() != null && Double.isFinite(obs.getValueNumeric())) {
+                value.put("valueType", "NUMBER").put("value", obs.getValueNumeric());
+            } else if (obs.getValueCoded() != null) {
+                value.put("valueType", "CODED").put("value", obs.getValueCoded().getUuid());
+                if (obs.getValueCoded().getName() != null) value.put("valueName", obs.getValueCoded().getName().getName());
+            } else if (obs.getValueText() != null) {
+                value.put("valueType", "STRING").put("value", obs.getValueText());
+            } else if (obs.getValueDatetime() != null) {
+                value.put("valueType", "DATE").put("value", ResolverSupport.time(obs.getValueDatetime()));
+            } else { value.put("valueType", "STRING").putNull("value"); }
+        }
+        ResolverSupport.collection(result, values, safe.size(), limit);
+        return result;
+    }
 }

@@ -14,7 +14,7 @@ import org.openmrs.api.context.Context;
 
 /** Production actor provider backed by the current OpenMRS authentication context. */
 public class OpenmrsEnrollmentActorProvider implements EnrollmentActorProvider {
-
+	
 	@Override
 	public String getCurrentActor() {
 		User user = Context.getAuthenticatedUser();

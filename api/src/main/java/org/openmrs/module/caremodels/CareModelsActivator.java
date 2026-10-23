@@ -25,6 +25,20 @@ public class CareModelsActivator extends BaseModuleActivator {
 	 */
 	@Override
 	public void started() {
+		org.openmrs.scheduler.SchedulerService scheduler = org.openmrs.api.context.Context.getSchedulerService();
+		org.openmrs.scheduler.TaskDefinition task = scheduler.getTaskByName("Care Models enrollment reconciliation");
+		if (task == null) {
+			task = new org.openmrs.scheduler.TaskDefinition();
+			task.setName("Care Models enrollment reconciliation");
+			task.setDescription("Bounded missed-event recovery using existing core global-property checkpoint");
+			task.setTaskClass("org.openmrs.module.caremodels.task.CareModelsReconciliationTask");
+			task.setStartOnStartup(true);
+			task.setRepeatInterval(60L);
+			task.setStartTime(new java.util.Date(System.currentTimeMillis() + 60000));
+			scheduler.saveTaskDefinition(task);
+		}
+		if (Boolean.TRUE.equals(task.getStartOnStartup()))
+			scheduler.scheduleIfNotRunning(task);
 		log.info("Started Care Models");
 	}
 	
@@ -33,6 +47,16 @@ public class CareModelsActivator extends BaseModuleActivator {
 	 */
 	@Override
 	public void stopped() {
+		org.openmrs.scheduler.SchedulerService scheduler = org.openmrs.api.context.Context.getSchedulerService();
+		org.openmrs.scheduler.TaskDefinition task = scheduler.getTaskByName("Care Models enrollment reconciliation");
+		if (task != null) {
+			try {
+				scheduler.shutdownTask(task);
+			}
+			catch (org.openmrs.scheduler.SchedulerException e) {
+				log.warn("Unable to stop Care Models reconciliation task");
+			}
+		}
 		log.info("Shutdown Care Models");
 	}
 	

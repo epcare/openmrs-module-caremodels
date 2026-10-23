@@ -21,18 +21,24 @@ import com.fasterxml.jackson.databind.JsonNode;
  * window, and include effective time, units and provenance in the result.
  */
 public interface DataResolver {
-	
+
 	/** Stable resolver id, matching the data source {@code type} for generic sources. */
 	String getId();
-	
+
+    /** Alias referent type. Null means this resolver uses no resource reference. */
+    default String getReferenceKind() { return "concepts"; }
+
+    default String getReferenceField() { return "conceptAlias"; }
+
+
 	/**
 	 * Executes the query.
-	 * 
+	 *
 	 * @param patientId the authorized patient's internal id
 	 * @param source the data source declaration from the published definition
-	 * @param resolvedConceptUuid the OpenMRS concept uuid the declared alias resolves to, or null
-	 *            for sources without a concept
+	 * @param resolvedReferenceUuid the OpenMRS resource UUID the declared alias resolves to, or null
+	 *            for sources without a resource reference
 	 * @return result node with value(s), type, units, effective time and provenance
 	 */
-	JsonNode resolve(Integer patientId, JsonNode source, String resolvedConceptUuid);
+	JsonNode resolve(Integer patientId, JsonNode source, String resolvedReferenceUuid);
 }

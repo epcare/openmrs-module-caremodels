@@ -53,13 +53,13 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
 		        .add(Restrictions.eq("uuid", uuid)).uniqueResult();
 	}
-
+	
 	@Override
 	public CareModelMember getCareModelMemberByUuidForUpdate(String uuid) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
 		        .add(Restrictions.eq("uuid", uuid)).setLockMode(LockMode.PESSIMISTIC_WRITE).uniqueResult();
 	}
-
+	
 	@Override
 	public CareModelMember getMemberBySource(Integer patientId, Integer careModelId, String sourceUuid) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
@@ -67,7 +67,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .add(Restrictions.eq("sourceUuid", sourceUuid)).addOrder(Order.desc("episodeNumber")).setMaxResults(1)
 		        .uniqueResult();
 	}
-
+	
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<CareModelMember> getMembersBySourceForUpdate(Integer patientId, String sourceUuid) {
@@ -75,7 +75,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .add(Restrictions.eq("patientId", patientId)).add(Restrictions.eq("sourceUuid", sourceUuid))
 		        .add(Restrictions.eq("voided", false)).setLockMode(LockMode.PESSIMISTIC_WRITE).list();
 	}
-
+	
 	@Override
 	public CareModelMember getOpenMember(Integer patientId, Integer careModelId) {
 		return (CareModelMember) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
@@ -84,7 +84,7 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		        .add(Restrictions.in("status", MemberStatus.PENDING, MemberStatus.ACTIVE, MemberStatus.SUSPENDED))
 		        .addOrder(Order.desc("episodeNumber")).setMaxResults(1).uniqueResult();
 	}
-
+	
 	@Override
 	public int getNextEpisodeNumber(Integer patientId, Integer careModelId) {
 		Integer maximum = (Integer) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)

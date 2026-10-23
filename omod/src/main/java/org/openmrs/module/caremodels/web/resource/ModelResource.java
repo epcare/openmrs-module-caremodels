@@ -22,7 +22,7 @@ import org.openmrs.module.webservices.rest.web.representation.Representation;
 import org.openmrs.module.webservices.rest.web.resource.api.PageableResult;
 import org.openmrs.module.webservices.rest.web.resource.impl.DelegatingCrudResource;
 import org.openmrs.module.webservices.rest.web.resource.impl.DelegatingResourceDescription;
-import org.openmrs.module.webservices.rest.web.resource.impl.NeedsPaging;
+import org.openmrs.module.webservices.rest.web.resource.impl.AlreadyPaged;
 import org.openmrs.module.webservices.rest.web.response.ResponseException;
 
 /**
@@ -73,6 +73,12 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 		return model;
 	}
 	
+	/** RESTWS dispatches requests containing q/patient/model/tab filters through search(). */
+	@Override
+	protected PageableResult doSearch(RequestContext context) throws ResponseException {
+		return doGetAll(context);
+	}
+	
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		String q = trimToNull(context.getParameter("q"));
@@ -85,7 +91,8 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 		}
 		List<CareModel> models = service().getCareModels(q, status, includeRetired, context.getStartIndex(),
 		    context.getLimit());
-		return new NeedsPaging<CareModel>(models, context);
+		long total = service().getCareModelsCount(q, status, includeRetired);
+		return new AlreadyPaged<CareModel>(context, models, (long) context.getStartIndex() + models.size() < total, total);
 	}
 	
 	@Override
@@ -99,6 +106,15 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 	}
 	
 	@Override
+	public DelegatingResourceDescription getUpdatableProperties() {
+		DelegatingResourceDescription description = new DelegatingResourceDescription();
+		description.addProperty("name");
+		description.addProperty("description");
+		description.addProperty("privilege");
+		return description;
+	}
+	
+	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
 		description.addProperty("uuid");
@@ -109,16 +125,6 @@ public class ModelResource extends DelegatingCrudResource<CareModel> {
 		description.addProperty("status");
 		description.addProperty("revision");
 		description.addProperty("retired");
-		return description;
-	}
-	
-	/** Only descriptive metadata is writable here; lifecycle fields use dedicated operations. */
-	@Override
-	public DelegatingResourceDescription getUpdatableProperties() {
-		DelegatingResourceDescription description = new DelegatingResourceDescription();
-		description.addProperty("name");
-		description.addProperty("description");
-		description.addProperty("privilege");
 		return description;
 	}
 	

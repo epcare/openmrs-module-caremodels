@@ -14,14 +14,14 @@ import org.openmrs.api.db.hibernate.HibernateUtil;
 
 /** Converts successful observation writes into transaction-aware clinical change events. */
 public class ObsServiceAdvice extends ClinicalChangeAdviceSupport implements MethodInterceptor {
-
+	
 	public ObsServiceAdvice() {
 	}
-
+	
 	ObsServiceAdvice(ClinicalChangePublisher publisher) {
 		super(publisher);
 	}
-
+	
 	@Override
 	public Object invoke(MethodInvocation invocation) throws Throwable {
 		String method = invocation.getMethod().getName();
@@ -36,19 +36,19 @@ public class ObsServiceAdvice extends ClinicalChangeAdviceSupport implements Met
 		}
 		return result;
 	}
-
+	
 	private String reviewSourceUuid(ClinicalChangeEvent.TriggerType type, Obs obs) {
 		if (type == ClinicalChangeEvent.TriggerType.OBSERVATION_SAVED) {
 			return null;
 		}
 		return obs.getPreviousVersion() != null ? obs.getPreviousVersion().getUuid() : obs.getUuid();
 	}
-
+	
 	private Obs firstArgument(MethodInvocation invocation) {
 		Object[] arguments = invocation.getArguments();
 		return arguments.length > 0 && arguments[0] instanceof Obs ? (Obs) arguments[0] : null;
 	}
-
+	
 	private ClinicalChangeEvent.TriggerType triggerType(String method, boolean newObservation) {
 		if ("saveObs".equals(method)) {
 			return newObservation ? ClinicalChangeEvent.TriggerType.OBSERVATION_SAVED
@@ -62,7 +62,7 @@ public class ObsServiceAdvice extends ClinicalChangeAdviceSupport implements Met
 		}
 		return null;
 	}
-
+	
 	private Patient patient(Obs obs) {
 		if (obs == null) {
 			return null;

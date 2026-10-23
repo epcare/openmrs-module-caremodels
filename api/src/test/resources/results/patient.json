@@ -1,0 +1,11 @@
+{
+  "type": "patient-summary",
+  "resolverVersion": "1.0.0",
+  "assessedAt": "2026-10-21T12:00:00Z",
+  "provenance": "OpenMRS service API",
+  "status": "ok",
+  "fields": {
+    "gender": "F",
+    "birthdateEstimated": true
+  }
+}

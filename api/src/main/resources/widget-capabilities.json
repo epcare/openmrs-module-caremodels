@@ -1,0 +1,293 @@
+{
+  "manifestVersion": "1.0.0",
+  "definitionSchemaVersion": "1.0.0",
+  "resolverVersion": "1.0.0",
+  "registeredResolvers": [
+    "latest-observation",
+    "historical-observations",
+    "encounter-query",
+    "program-state",
+    "order-query",
+    "conditions",
+    "encounter-diagnoses",
+    "patient-summary"
+  ],
+  "widgets": [
+    {
+      "catalogId": 1,
+      "label": "Clinical Metric",
+      "backend": "Implemented/tested observations",
+      "limitation": "numeric/coded/text/date, provenance, bounds; no medical inference",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "metric",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 2,
+      "label": "Clinical Status",
+      "backend": "Implemented/tested observations",
+      "limitation": "metric/status retained; coded values and explicit mappings",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "metric",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false,
+      "presentation": "status"
+    },
+    {
+      "catalogId": 3,
+      "label": "Trend Chart",
+      "backend": "Implemented/tested source",
+      "limitation": "bounded history, deterministic ties, qualified strings; frontend multi-series work separate",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "trend-chart",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 4,
+      "label": "Clinical Table",
+      "backend": "Implemented/tested sources",
+      "limitation": "bounded observation/typed records, fields/truncation; typed frontend tables pending",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "clinical-table",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 5,
+      "label": "Encounter Timeline",
+      "backend": "Implemented/tested source",
+      "limitation": "actual encounter records; frontend must stop using observation timeline for this source",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "timeline",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 6,
+      "label": "Diagnosis / Conditions",
+      "backend": "Implemented/tested sources",
+      "limitation": "separate longitudinal and encounter diagnosis types; typed renderer pending",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "condition-list",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 7,
+      "label": "Medication Summary",
+      "backend": "Partial",
+      "limitation": "exact concept-scoped history; complete current-regimen semantics not supplied",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "medication-summary",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 8,
+      "label": "Program Summary",
+      "backend": "Implemented/tested source",
+      "limitation": "exact program and multiple enrollment episodes; enrollment-date window explicit",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "program-summary",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 9,
+      "label": "Patient Summary",
+      "backend": "Implemented/tested source",
+      "limitation": "minimal explicitly selected fields; no patient data in definitions",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "patient-summary",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 10,
+      "label": "Care Reminders",
+      "backend": "BLOCKED",
+      "limitation": "approved reminder rules, actual due-date semantics and registered actions absent",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": null,
+      "componentVersion": null,
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 11,
+      "label": "Form Launcher",
+      "backend": "Partial",
+      "limitation": "multiple safe descriptors; deployment engine/launcher verification absent",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "form-launcher",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 12,
+      "label": "Quick Actions",
+      "backend": "Partial",
+      "limitation": "selected registered descriptor types; executable frontend handlers absent",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "action-panel",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 13,
+      "label": "Order / Request Actions",
+      "backend": "BLOCKED",
+      "limitation": "installed registered order-entry workspace and permission integration absent",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": null,
+      "componentVersion": null,
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 14,
+      "label": "Appointment Actions",
+      "backend": "BLOCKED",
+      "limitation": "runtime module detection only; registered frontend appointment workspace absent",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": null,
+      "componentVersion": null,
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 15,
+      "label": "Patient List Link",
+      "backend": "BLOCKED",
+      "limitation": "approved list/destination registry and destination authorization absent",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": null,
+      "componentVersion": null,
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 16,
+      "label": "Text / Note",
+      "backend": "Implemented/tested static contract",
+      "limitation": "text-note; frontend renderer pending",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "text-note",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 17,
+      "label": "Section Heading",
+      "backend": "Implemented/tested static contract",
+      "limitation": "section-heading, bounded heading level",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "section-heading",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 18,
+      "label": "Divider",
+      "backend": "Implemented/tested static contract",
+      "limitation": "divider, finite orientation",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "divider",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 19,
+      "label": "Spacer",
+      "backend": "Implemented/tested static contract",
+      "limitation": "spacer, finite size set",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "spacer",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 20,
+      "label": "Alert / Callout",
+      "backend": "Partial",
+      "limitation": "static-callout tested; dynamic clinical alert rules absent",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "static-callout",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 21,
+      "label": "Care Plan / Milestones",
+      "backend": "Partial",
+      "limitation": "authorized recorded stage only; no inferred milestone completion/mutation",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "care-plan",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 22,
+      "label": "Summary Chart",
+      "backend": "Partial",
+      "limitation": "multi-bindings authorized independently; multi-series frontend scales/rendering pending",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "trend-chart",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 23,
+      "label": "Adherence Indicator",
+      "backend": "BLOCKED",
+      "limitation": "approved observation/method, period and missing-data specification absent",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": null,
+      "componentVersion": null,
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 24,
+      "label": "Risk Indicator",
+      "backend": "BLOCKED",
+      "limitation": "clinically validated versioned risk method and inputs absent",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": null,
+      "componentVersion": null,
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 25,
+      "label": "Custom Metric (Derived)",
+      "backend": "BLOCKED",
+      "limitation": "registered versioned calculation and input/unit/effective-date specification absent",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": null,
+      "componentVersion": null,
+      "newRendererEnabledByThisRelease": false
+    }
+  ]
+}

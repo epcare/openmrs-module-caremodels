@@ -175,7 +175,7 @@ public class SemanticValidatorTest {
 	public void shouldRejectIncompatibleWidgetResultType() throws Exception {
 		JsonNode definition = parse("hiv-model");
 		((com.fasterxml.jackson.databind.node.ObjectNode) definition.path("dataSources").path("viral_load_history")).put(
-		    "resultType", "NUMBER");
+		    "resultType", "STRING");
 		Fixtures.assertInvalid(validator.validateDefinition(definition), "trend chart result mismatch");
 	}
 	

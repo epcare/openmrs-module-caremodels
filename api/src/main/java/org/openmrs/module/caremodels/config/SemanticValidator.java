@@ -38,8 +38,16 @@ public class SemanticValidator {
 	
 	private final OpenmrsReferenceChecker checker;
 	
+	private final org.openmrs.module.caremodels.resolver.DataResolverRegistry resolvers;
+	
 	public SemanticValidator(OpenmrsReferenceChecker checker) {
+		this(checker, new org.openmrs.module.caremodels.resolver.DataResolverRegistry());
+	}
+	
+	public SemanticValidator(OpenmrsReferenceChecker checker,
+	    org.openmrs.module.caremodels.resolver.DataResolverRegistry registry) {
 		this.checker = checker;
+		this.resolvers = registry;
 	}
 	
 	public ValidationResult validateDefinition(JsonNode definition) {
@@ -132,8 +140,9 @@ public class SemanticValidator {
 			String path = "$.dataSources." + field.getKey();
 			JsonNode dataSource = field.getValue();
 			String type = dataSource.path("type").asText();
+			result.merge(org.openmrs.module.caremodels.resolver.SourceContract.validate(dataSource, resolvers, path));
 			
-			if (Registry.DATA_SOURCE_TYPES.contains(type) && !Registry.DS_REGISTERED.equals(type)) {
+			if (Registry.DATA_SOURCE_TYPES.contains(type)) {
 				checkAliasExists(dataSource, "conceptAlias", "concepts", terminology, path, result);
 				checkAliasExists(dataSource, "programAlias", "programs", terminology, path, result);
 				checkAliasExists(dataSource, "encounterTypeAlias", "encounterTypes", terminology, path, result);
@@ -179,6 +188,10 @@ public class SemanticValidator {
 				result.addError(path + ".alias", "Form alias '" + alias + "' is not declared in terminology.forms");
 			}
 			checkAliasExists(form, "encounterTypeAlias", "encounterTypes", terminology, path, result);
+			if (!form.path("formUuid").asText().equals(terminology.path("forms").path(alias).asText())) {
+				result.addError(path + ".formUuid", "Form UUID must match terminology.forms alias");
+			}
+			
 		}
 	}
 	
@@ -287,26 +300,48 @@ public class SemanticValidator {
 		if (!Registry.WIDGET_TYPES.contains(type)) {
 			result.addError(path + ".type", "Widget type '" + type + "' is not registered");
 		}
-		
+
 		// Data-backed widgets must declare a data source that exists; resolvers are only invoked
 		// for sources declared in the selected visible tab, so an undeclared name can never resolve.
 		String dataSource = widget.path("dataSource").asText(null);
+		for (JsonNode binding : widget.path("dataSources")) {
+			if (!dataSources.has(binding.asText())) {
+				result.addError(path + ".dataSources", "Undeclared source: " + binding.asText());
+			}
+		}
+		if (widget.has("dataSources") && !Registry.WIDGET_TREND_CHART.equals(type)) {
+			result.addError(path + ".dataSources", "Multiple bindings are supported only by trend-chart");
+		}
+		for (JsonNode alias : widget.path("formAliases")) {
+			if (!terminology.path("forms").has(alias.asText()) || !hasFormAlias(forms, alias.asText())) {
+				result.addError(path + ".formAliases", "Undeclared form alias: " + alias.asText());
+			}
+		}
+		JsonNode position = widget.path("position");
+		if (position.has("col") && position.path("col").asInt() + position.path("w").asInt() > 13) {
+			result.addError(path + ".position", "Widget exceeds the 12-column grid");
+		}
 		if (dataSource != null && !dataSources.has(dataSource)) {
 			result.addError(path + ".dataSource", "Widget references data source '" + dataSource
 			        + "' which is not declared in dataSources");
 		}
-		if (dataSource != null && dataSources.has(dataSource)) {
-			String resultType = dataSources.path(dataSource).path("resultType").asText();
-			boolean compatible = Registry.WIDGET_TREND_CHART.equals(type) ? "TIMESERIES".equals(resultType)
-			        : Registry.WIDGET_CLINICAL_TABLE.equals(type) || Registry.WIDGET_TIMELINE.equals(type) ? "TABLE"
-			                .equals(resultType) || "TIMESERIES".equals(resultType) : !Registry.WIDGET_METRIC.equals(type)
-			                || !("TIMESERIES".equals(resultType) || "TABLE".equals(resultType));
-			if (!compatible) {
-				result.addError(path + ".dataSource", "Widget type '" + type + "' is incompatible with result type '"
-				        + resultType + "'");
-			}
-		}
-		
+
+        if ((Registry.WIDGET_FORM_LAUNCHER.equals(type) || Registry.WIDGET_ACTION_PANEL.equals(type)) && (widget.has("dataSource") || widget.has("dataSources")))
+            result.addError(path, "Action widgets cannot bind clinical sources");
+        JsonNode properties = widget.path("properties");
+        if (properties.has("targetMin") && properties.has("targetMax") && properties.path("targetMin").asDouble() > properties.path("targetMax").asDouble())
+            result.addError(path + ".properties", "targetMin exceeds targetMax");
+        java.util.Set<String> mappings = new java.util.HashSet<>();
+        for (JsonNode mapping : properties.path("statusMappings")) if (!mappings.add(mapping.path("value").asText()))
+            result.addError(path + ".properties.statusMappings", "Duplicate status value");
+        java.util.Set<String> columns = new java.util.HashSet<>();
+        for (JsonNode column : properties.path("columns")) if (!columns.add(column.path("field").asText()))
+            result.addError(path + ".properties.columns", "Duplicate field");
+        if (widget.has("dataSources") && widget.has("dataSource")) result.addError(path, "Use dataSource or dataSources, not both");
+        if (widget.has("dataSources")) {
+            for (JsonNode key : widget.path("dataSources")) validateBinding(type, dataSources.path(key.asText()), path, result);
+        } else if (dataSource != null) validateBinding(type, dataSources.path(dataSource), path, result);
+
 		JsonNode actionIds = widget.path("actionIds");
 		if (actionIds.isArray()) {
 			for (int i = 0; i < actionIds.size(); i++) {
@@ -317,12 +352,35 @@ public class SemanticValidator {
 				}
 			}
 		}
-		
+
 		String formAlias = widget.path("formAlias").asText(null);
 		if (formAlias != null && !terminology.path("forms").has(formAlias)) {
 			result.addError(path + ".formAlias", "Widget form alias '" + formAlias
 			        + "' is not declared in terminology.forms");
 		}
+	}
+	
+	private void validateBinding(String type, JsonNode source, String path, ValidationResult result) {
+		String id = org.openmrs.module.caremodels.resolver.SourceContract.resolverId(source);
+		String resultType = source.path("resultType").asText();
+		boolean observation = Registry.DS_LATEST_OBSERVATION.equals(id) || Registry.DS_HISTORICAL_OBSERVATIONS.equals(id);
+		if (Registry.WIDGET_METRIC.equals(type)
+		        && (!observation || "TABLE".equals(resultType) || "TIMESERIES".equals(resultType)))
+			result.addError(path + ".dataSource", "Metric requires observation values");
+		if (Registry.WIDGET_TREND_CHART.equals(type)
+		        && (!observation || !("NUMBER".equals(resultType) || "TIMESERIES".equals(resultType))))
+			result.addError(path + ".dataSource", "Chart requires declared numeric observation sources");
+		String required = null;
+		if ("condition-list".equals(type) && !"conditions".equals(id) && !"encounter-diagnoses".equals(id))
+			required = "conditions or encounter-diagnoses";
+		if ("medication-summary".equals(type) && !"order-query".equals(id))
+			required = "order-query";
+		if ("program-summary".equals(type) && !"program-state".equals(id))
+			required = "program-state";
+		if ("patient-summary".equals(type) && !"patient-summary".equals(id))
+			required = "patient-summary";
+		if (required != null)
+			result.addError(path + ".dataSource", "Required resolver: " + required);
 	}
 	
 	private boolean hasActionId(JsonNode actions, String actionId) {

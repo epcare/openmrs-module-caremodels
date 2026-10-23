@@ -19,21 +19,21 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * completed.
  */
 public class ClinicalChangePublisher {
-
+	
 	private static final Logger log = Logger.getLogger(ClinicalChangePublisher.class.getName());
-
+	
 	private List<ClinicalChangeListener> listeners = Collections.emptyList();
-
+	
 	public void setListeners(List<ClinicalChangeListener> listeners) {
 		this.listeners = listeners == null ? Collections.<ClinicalChangeListener> emptyList() : Collections
 		        .unmodifiableList(new ArrayList<ClinicalChangeListener>(listeners));
 	}
-
+	
 	public void publishAfterCommit(final ClinicalChangeEvent event) {
 		if (TransactionSynchronizationManager.isSynchronizationActive()
 		        && TransactionSynchronizationManager.isActualTransactionActive()) {
 			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
-
+				
 				@Override
 				public void afterCommit() {
 					deliver(event);
@@ -43,14 +43,15 @@ public class ClinicalChangePublisher {
 			deliver(event);
 		}
 	}
-
+	
 	private void deliver(ClinicalChangeEvent event) {
 		for (ClinicalChangeListener listener : listeners) {
 			try {
 				listener.onClinicalChange(event);
 			}
 			catch (RuntimeException e) {
-				log.log(Level.SEVERE, "Clinical change listener failed for source " + event.getSourceUuid(), e);
+				log.log(Level.SEVERE, "Clinical change listener failed ({0}); reconciliation required", e.getClass()
+				        .getSimpleName());
 			}
 		}
 	}

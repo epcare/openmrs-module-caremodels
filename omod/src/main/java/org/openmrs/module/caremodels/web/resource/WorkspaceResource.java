@@ -58,6 +58,12 @@ public class WorkspaceResource extends DelegatingCrudResource<WorkspaceTab> {
 		throw new UnsupportedOperationException("Use ?patient=&model=&tab=");
 	}
 	
+	/** RESTWS dispatches requests containing q/patient/model/tab filters through search(). */
+	@Override
+	protected PageableResult doSearch(RequestContext context) throws ResponseException {
+		return doGetAll(context);
+	}
+	
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		String patient = trimToNull(context.getParameter("patient"));
@@ -95,6 +101,7 @@ public class WorkspaceResource extends DelegatingCrudResource<WorkspaceTab> {
 			tabs.add(summary);
 		}
 		result.setTabs(tabs);
+		result.setDescriptors(new org.openmrs.module.caremodels.workspace.WorkspaceDescriptors().resolve(access));
 		return new NeedsPaging<WorkspaceTab>(Collections.singletonList(result), context);
 	}
 	
@@ -117,9 +124,10 @@ public class WorkspaceResource extends DelegatingCrudResource<WorkspaceTab> {
 		description.addProperty("tabId");
 		description.addProperty("tabLabel");
 		if (representation instanceof DefaultRepresentation) {
-			description.addProperty("tabs");
 			description.addProperty("widgets");
 			description.addProperty("layouts");
+			description.addProperty("tabs");
+			description.addProperty("descriptors");
 		}
 		return description;
 	}

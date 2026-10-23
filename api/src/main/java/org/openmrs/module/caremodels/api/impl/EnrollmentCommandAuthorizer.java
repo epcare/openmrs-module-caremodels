@@ -9,6 +9,6 @@ import org.openmrs.module.caremodels.model.CareModel;
 
 /** Additional patient and model authorization for clinician-initiated enrollment commands. */
 public interface EnrollmentCommandAuthorizer {
-
+	
 	void authorize(Integer patientId, CareModel model);
 }
