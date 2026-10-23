@@ -9,15 +9,25 @@
  */
 package org.openmrs.module.caremodels.api;
 
-import org.openmrs.api.OpenmrsService;
+import java.util.Date;
+
 import org.openmrs.annotation.Authorized;
+import org.openmrs.api.APIException;
+import org.openmrs.api.OpenmrsService;
+import org.openmrs.module.caremodels.dto.EnrollmentReconciliationResult;
 import org.openmrs.module.caremodels.security.CareModelsPrivileges;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Background/admin-only missed-event recovery. Never called by membership or workspace reads. */
 public interface CareModelReconciliationService extends OpenmrsService {
-	
+
+	/** Advances the durable background checkpoint by one bounded model/patient batch. */
 	@Transactional(timeout = 30)
 	@Authorized(CareModelsPrivileges.MANAGE_CARE_MODELS)
 	int reconcileNextBatch(int limit);
+
+	/** Caller-managed backfill. Reuse asOf when retrying the same logical run. */
+	@Transactional(timeout = 30)
+	@Authorized(CareModelsPrivileges.MANAGE_CARE_MODELS)
+	EnrollmentReconciliationResult reconcile(Integer afterPatientId, Integer limit, Date asOf) throws APIException;
 }

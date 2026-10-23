@@ -22,16 +22,16 @@ import org.openmrs.module.caremodels.model.CareModel.CareModelStatus;
  * requests.
  */
 public interface CareModelDAO {
-
+	
 	CareModel saveCareModel(CareModel careModel);
-
+	
 	CareModel getCareModelById(Integer id);
 
 	/** Locks one model row to serialize membership episode creation for that model. */
 	CareModel getCareModelByIdForUpdate(Integer id);
 
 	CareModel getCareModelByUuid(String uuid);
-
+	
 	CareModel getCareModelByCode(String code);
 
 	/**
@@ -43,7 +43,7 @@ public interface CareModelDAO {
 
 	/**
 	 * Search/filter the model registry. Excludes the {@code configuration} envelope.
-	 *
+	 * 
 	 * @param qStr free-text match on name/code
 	 * @param status optional status filter
 	 * @param includeRetired whether retired models are included
@@ -55,17 +55,17 @@ public interface CareModelDAO {
 	List<CareModel> getPublishedCareModelsForEnrollment();
 
 	long getCareModelsCount(String qStr, CareModelStatus status, boolean includeRetired);
-
+	
 	void purgeCareModel(CareModel careModel);
-
+	
 	/**
 	 * Metadata projection for the given model, selected without the {@code configuration} column.
 	 * The membership listing path uses this exclusively so the JSON envelope is never fetched.
-	 *
+	 * 
 	 * @return the projection, or null when no model exists for the id
 	 */
 	CareModelRef getModelRef(Integer careModelId);
-
+	
 	/**
 	 * Metadata projections for many models in one query; {@code configuration} is never selected.
 	 */

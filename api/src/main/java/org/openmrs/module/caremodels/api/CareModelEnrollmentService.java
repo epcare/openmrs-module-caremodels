@@ -29,6 +29,11 @@ public interface CareModelEnrollmentService extends OpenmrsService {
 	CareModelMember applyRuleEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
 	        String sourceUuid, Date asOf) throws APIException;
 	
+	/** Applies a deterministic reconciliation decision with BACKFILL provenance. */
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	CareModelMember applyBackfillEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
+	        String sourceUuid, Date asOf) throws APIException;
+	
 	/** Flags every enrollment created from corrected or voided source evidence for human review. */
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	int flagEnrollmentsForReview(Integer patientId, String sourceUuid, String reason, Date asOf) throws APIException;

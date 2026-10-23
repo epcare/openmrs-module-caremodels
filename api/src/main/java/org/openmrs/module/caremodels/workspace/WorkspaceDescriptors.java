@@ -21,7 +21,7 @@ import org.openmrs.module.caremodels.resolver.ResolverSupport;
 
 /** Safe descriptors for references actually used by the selected, authorized tab. */
 public class WorkspaceDescriptors {
-	
+
 	public ObjectNode resolve(AuthorizedAccess access) {
         JsonNode definition = access.getPublishedDefinition();
         Set<String> formAliases = new LinkedHashSet<>();
@@ -55,7 +55,10 @@ public class WorkspaceDescriptors {
             switch (type) {
                 case "launch-form":
                     String alias = action.path("formAlias").asText();
-                    descriptor.put("formAlias", alias).put("reason", formByAlias.get(alias).path("reason").asText()); break;
+                    ObjectNode form = formByAlias.get(alias);
+                    descriptor.put("formAlias", alias).put("available", form.path("available").asBoolean());
+                    if (form.has("reason")) descriptor.put("reason", form.path("reason").asText());
+                    break;
                 case "open-order-entry": descriptor.put("reason", "registered-order-workspace-required"); break;
                 case "open-appointments": descriptor.put("reason", ModuleFactory.getStartedModuleById("appointmentscheduling") == null
                     ? "appointments-module-unavailable" : "registered-appointment-workspace-required"); break;
@@ -63,11 +66,11 @@ public class WorkspaceDescriptors {
                 case "enrollment-transition": descriptor.put("reason", "no-authorized-transition-rest-contract"); break;
                 default: descriptor.put("reason", "unregistered-handler");
             }
-            if (action.has("availabilityRule")) descriptor.put("reason", "registered-availability-rule-required");
+            if (action.has("availabilityRule")) descriptor.put("available", false).put("reason", "registered-availability-rule-required");
         }
         return result;
     }
-	
+
 	private ObjectNode resolveForm(JsonNode definition, String alias) {
 		ObjectNode descriptor = ResolverSupport.MAPPER.createObjectNode().put("alias", alias).put("available", false);
 		JsonNode declared = null;
@@ -107,7 +110,10 @@ public class WorkspaceDescriptors {
 			if (resource.getName() != null && resources.size() < 20)
 				resources.add(resource.getName());
 		}
-		return descriptor.put("reason", resources.size() == 0 ? "form-engine-resource-unavailable"
-		        : "frontend-form-engine-not-verified");
+		if (resources.size() == 0)
+			return descriptor.put("reason", "form-engine-resource-unavailable");
+		// The verified launcher is the installed @openmrs/esm-form-engine-app 'form' workspace in
+		// the patient chart; it attributes the saved encounter to the chart's active visit context.
+		return descriptor.put("available", true);
 	}
 }

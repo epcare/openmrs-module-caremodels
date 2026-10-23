@@ -18,21 +18,21 @@ import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
 public class PatientResourceContractTest {
-	
+
 	private final ObjectMapper mapper = new ObjectMapper();
-	
+
 	private MockedStatic<Context> context;
-	
+
 	private CareModelAccessService accessService;
-	
+
 	private ObjectNode definition;
-	
+
 	private DataResolver resolver;
-	
+
 	private DataRequestResource resource;
-	
+
 	private Patient patient;
-	
+
 	@Before public void setup() throws Exception {
         context = mockStatic(Context.class);
         accessService = mock(CareModelAccessService.class);
@@ -48,17 +48,17 @@ public class PatientResourceContractTest {
         DataResolverRegistry registry = new DataResolverRegistry(); registry.register(resolver);
         resource = new DataRequestResource(registry);
     }
-	
+
 	@After
 	public void cleanup() {
 		context.close();
 	}
-	
+
 	private AuthorizedAccess authorized() {
 		JsonNode tab = definition.path("workspace").path("tabs").get(0);
 		return new AuthorizedAccess("patient", "model", "model-uuid", "member", definition, tab, mapper.createArrayNode());
 	}
-	
+
 	private DataRequestResult request(String key) {
 		DataRequestResult request = new DataRequestResult();
 		request.setPatient("patient");
@@ -67,7 +67,7 @@ public class PatientResourceContractTest {
 		request.setDataSource(key);
 		return request;
 	}
-	
+
 	@Test
 	public void dataShouldReauthorizeAndSerializeResultAsJsonString() throws Exception {
 		DataRequestResult response = resource.save(request("first"));
@@ -76,7 +76,7 @@ public class PatientResourceContractTest {
 		resource.save(request("first"));
 		verify(accessService, times(2)).authorizeWorkspace("patient", "model", "overview");
 	}
-	
+
 	@Test
 	public void unselectedTabOrUnboundSourceShouldMakeZeroClinicalCalls() {
 		try {
@@ -91,7 +91,7 @@ public class PatientResourceContractTest {
 		catch (APIException expected) {}
 		verify(resolver, never()).resolve(any(), any(), any());
 	}
-	
+
 	@Test
 	public void deniedPatientModelOrMembershipShouldMakeZeroClinicalCalls() {
 		when(accessService.authorizeWorkspace(anyString(), anyString(), anyString())).thenThrow(new APIException("denied"));
@@ -102,7 +102,7 @@ public class PatientResourceContractTest {
 		catch (APIException expected) {}
 		verify(resolver, never()).resolve(any(), any(), any());
 	}
-	
+
 	@Test
 	public void everyMultiSourceBindingMustBeDeclaredOnSelectedTab() {
 		ObjectNode widget = (ObjectNode) definition.path("workspace").path("tabs").get(0).path("widgets").get(0);
@@ -118,7 +118,7 @@ public class PatientResourceContractTest {
 		}
 		catch (APIException expected) {}
 	}
-	
+
 	@Test
 	public void missingPatientMustNeverResolveAnUnscopedClinicalQuery() {
 		patient.setVoided(true);
@@ -129,7 +129,7 @@ public class PatientResourceContractTest {
 		catch (APIException expected) {}
 		verify(resolver, never()).resolve(any(), any(), any());
 	}
-	
+
 	@Test
 	public void workspaceDiscoveryShouldNotExecuteResolversOrExposeOtherTabs() {
 		JsonNode descriptors = new WorkspaceDescriptors().resolve(authorized());
@@ -139,7 +139,7 @@ public class PatientResourceContractTest {
 		assertTrue(new WorkspaceResource().getRepresentationDescription(new DefaultRepresentation()).getProperties()
 		        .containsKey("descriptors"));
 	}
-	
+
 	@Test public void formDescriptorsShouldResolveMultipleSelectedReferencesAndKeepUnsupportedLaunchersDisabled() throws Exception {
         ((ObjectNode)definition.path("terminology")).putObject("forms").put("one", "form-1").put("two", "form-2").put("unselected", "form-3");
         ((ArrayNode)definition.path("forms")).addObject().put("alias", "one").put("formUuid", "form-1");
@@ -156,7 +156,7 @@ public class PatientResourceContractTest {
         assertEquals("form-retired", descriptors.path("forms").get(1).path("reason").asText());
         verify(forms, never()).getFormByUuid("form-3"); verify(resolver, never()).resolve(any(), any(), any());
     }
-	
+
 	@Test
 	public void arbitraryActionTargetsMustNotBecomeExecutableDescriptors() {
 		((ArrayNode) definition.path("actions")).addObject().put("id", "unsafe").put("type", "navigate-internal")
@@ -168,7 +168,7 @@ public class PatientResourceContractTest {
 		assertFalse(action.has("target"));
 		assertEquals("registered-authorized-destination-required", action.path("reason").asText());
 	}
-	
+
 	@Test public void missingAndPublishedFormsMustNotBecomeLaunchableFromCatalogMetadataAlone() throws Exception {
         ((ObjectNode)definition.path("terminology")).putObject("forms").put("one", "form-1");
         ((ArrayNode)definition.path("forms")).addObject().put("alias", "one").put("formUuid", "form-1");
@@ -186,6 +186,15 @@ public class PatientResourceContractTest {
         FormResource metadata = new FormResource(); metadata.setName("JSON schema");
         when(forms.getFormResourcesForForm(form)).thenReturn(Collections.singletonList(metadata));
         JsonNode resolved = new WorkspaceDescriptors().resolve(authorized()).path("forms").get(0);
-        assertFalse(resolved.path("available").asBoolean()); assertEquals("frontend-form-engine-not-verified", resolved.path("reason").asText());
+        assertTrue(resolved.path("available").asBoolean());
+        assertEquals("", resolved.path("reason").asText());
+        assertTrue(resolved.path("resourceNames").size() > 0);
+        ObjectNode launch = ((ArrayNode)definition.path("actions")).addObject().put("id", "launch")
+            .put("type", "launch-form").put("formAlias", "one");
+        ((ObjectNode)definition.path("workspace").path("tabs").get(0).path("widgets").get(0)).putArray("actionIds").add("launch");
+        assertTrue(new WorkspaceDescriptors().resolve(authorized()).path("actions").get(0).path("available").asBoolean());
+        launch.putObject("availabilityRule").put("literal", "TRUE");
+        assertFalse(new WorkspaceDescriptors().resolve(authorized()).path("actions").get(0).path("available").asBoolean());
+
     }
 }

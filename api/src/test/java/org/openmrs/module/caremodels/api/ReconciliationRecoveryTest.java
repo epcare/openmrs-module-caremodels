@@ -18,27 +18,27 @@ import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
 public class ReconciliationRecoveryTest {
-	
+
 	private final ObjectMapper mapper = new ObjectMapper();
-	
+
 	private MockedStatic<Context> context;
-	
+
 	private CareModelDAO dao;
-	
+
 	private CareModelMemberDAO members;
-	
+
 	private CareModelEnrollmentService enrollment;
-	
+
 	private AdministrationService admin;
-	
+
 	private GlobalProperty cursor;
-	
+
 	private CareModel model;
-	
+
 	private EnrollmentRuleEvidenceFactory evidence;
-	
+
 	private CareModelReconciliationServiceImpl recovery;
-	
+
 	@Before public void setup() throws Exception {
         context = mockStatic(Context.class); admin = mock(AdministrationService.class); context.when(Context::getAdministrationService).thenReturn(admin);
         dao = mock(CareModelDAO.class); members = mock(CareModelMemberDAO.class); enrollment = mock(CareModelEnrollmentService.class); evidence = mock(EnrollmentRuleEvidenceFactory.class);
@@ -53,13 +53,13 @@ public class ReconciliationRecoveryTest {
         when(evidence.create(anyInt(), any(), any())).thenReturn((type, alias) -> RuleEvidence.present(true));
         recovery = new CareModelReconciliationServiceImpl(); recovery.setCareModelDAO(dao); recovery.setMemberDAO(members); recovery.setEnrollmentService(enrollment); recovery.setEvidenceFactory(evidence);
     }
-	
+
 	@After
 	public void cleanup() {
 		if (context != null)
 			context.close();
 	}
-	
+
 	@Test
 	public void shouldResumeBoundedBatchesFromPersistedCoreCheckpoint() throws Exception {
 		assertEquals(1, recovery.reconcileNextBatch(1));
@@ -70,14 +70,14 @@ public class ReconciliationRecoveryTest {
 		assertEquals(evaluationTime, mapper.readTree(cursor.getPropertyValue()).path("asOf").asText());
 		assertEquals(0, recovery.reconcileNextBatch(1));
 		assertTrue(mapper.readTree(cursor.getPropertyValue()).path("completed").asBoolean());
-		verify(enrollment, times(2)).applyRuleEnrollment(anyInt(), eq(3), eq("eligible"),
+		verify(enrollment, times(2)).applyBackfillEnrollment(anyInt(), eq(3), eq("eligible"),
 		    eq(EnrollmentRuleEngine.Action.AUTO_ENROLL), anyString(), any());
 	}
-	
+
 	@Test
 	public void failedPersistenceMustNotAdvanceTheCheckpointAndRetryMustUseSameSource() {
 		doThrow(new APIException("temporary failure")).doReturn(null).when(enrollment)
-		        .applyRuleEnrollment(anyInt(), eq(3), anyString(), any(), anyString(), any());
+		        .applyBackfillEnrollment(anyInt(), eq(3), anyString(), any(), anyString(), any());
 		try {
 			recovery.reconcileNextBatch(1);
 			fail();
@@ -86,10 +86,10 @@ public class ReconciliationRecoveryTest {
 		assertEquals("{}", cursor.getPropertyValue());
 		recovery.reconcileNextBatch(1);
 		org.mockito.ArgumentCaptor<String> source = org.mockito.ArgumentCaptor.forClass(String.class);
-		verify(enrollment, times(2)).applyRuleEnrollment(eq(1), eq(3), eq("eligible"), any(), source.capture(), any());
+		verify(enrollment, times(2)).applyBackfillEnrollment(eq(1), eq(3), eq("eligible"), any(), source.capture(), any());
 		assertEquals(source.getAllValues().get(0), source.getAllValues().get(1));
 	}
-	
+
 	@Test public void unavailableEvidenceMustRetryWhileKnownAbsenceMustAllowProgress() throws Exception {
         when(evidence.create(anyInt(), any(), any())).thenReturn((type, alias) -> RuleEvidence.unknown());
         try { recovery.reconcileNextBatch(1); fail(); } catch (APIException expected) { }
@@ -97,7 +97,7 @@ public class ReconciliationRecoveryTest {
         when(evidence.create(anyInt(), any(), any())).thenReturn((type, alias) -> RuleEvidence.absent());
         assertEquals(1, recovery.reconcileNextBatch(1)); verifyNoInteractions(enrollment);
     }
-	
+
 	@Test
 	public void changedPublicationMustRestartTheModelScan() throws Exception {
 		recovery.reconcileNextBatch(1);
@@ -111,9 +111,66 @@ public class ReconciliationRecoveryTest {
 		assertEquals(1, mapper.readTree(cursor.getPropertyValue()).path("patientId").asInt());
 		verify(dao, times(2)).getPatientIdsAfter(0, 2, 1);
 	}
-	
+
 	@Test(expected = IllegalArgumentException.class)
 	public void shouldRejectUnboundedBatches() {
 		recovery.reconcileNextBatch(101);
 	}
+
+	@Test public void knownIneligibilityMustFlagAutomaticMembershipButProtectManualMembership() throws Exception {
+        org.openmrs.module.caremodels.model.CareModelMember current = new org.openmrs.module.caremodels.model.CareModelMember();
+        current.setEnrollmentSource("BACKFILL"); current.setSourceUuid("source");
+        when(members.getOpenMember(1, 3)).thenReturn(current);
+        when(evidence.create(anyInt(), any(), any())).thenReturn((type, alias) -> RuleEvidence.absent());
+        recovery.reconcileNextBatch(1);
+        verify(enrollment).flagEnrollmentsForReview(eq(1), eq("source"), anyString(), any());
+        clearInvocations(enrollment);
+        cursor.setPropertyValue("{}"); current.setEnrollmentSource("MANUAL");
+        recovery.reconcileNextBatch(1);
+        verifyNoInteractions(enrollment);
+    }
+
+	@Test
+	public void committedCreationMustNotChangeReplayIdentityButClosedEpisodeMustAllowANewPeriod() throws Exception {
+		recovery.reconcileNextBatch(1);
+		org.mockito.ArgumentCaptor<String> source = org.mockito.ArgumentCaptor.forClass(String.class);
+		verify(enrollment).applyBackfillEnrollment(eq(1), eq(3), anyString(), any(), source.capture(), any());
+		String original = source.getValue();
+		org.openmrs.module.caremodels.model.CareModelMember episode = new org.openmrs.module.caremodels.model.CareModelMember();
+		episode.setEpisodeNumber(1);
+		episode.setDateEnrolled(new Date(100));
+		when(members.getMembersByPatientAndModel(1, 3)).thenReturn(Collections.singletonList(episode));
+		when(members.getNextEpisodeNumber(1, 3)).thenReturn(2);
+		cursor.setPropertyValue("{}");
+		recovery.reconcileNextBatch(1);
+		verify(enrollment, times(2)).applyBackfillEnrollment(eq(1), eq(3), anyString(), any(), source.capture(), any());
+		assertEquals(original, source.getValue());
+		episode.setDateCompleted(new Date(200));
+		cursor.setPropertyValue("{}");
+		recovery.reconcileNextBatch(1);
+		verify(enrollment, times(3)).applyBackfillEnrollment(eq(1), eq(3), anyString(), any(), source.capture(), any());
+		assertNotEquals(original, source.getValue());
+	}
+
+	@Test public void adminRecoveryMustRejectUnavailableEvidenceToo() throws Exception {
+        recovery.setReconciliationDAO((after, limit) -> Collections.singletonList(1));
+        when(dao.getPublishedCareModelsForEnrollment()).thenReturn(Collections.singletonList(model));
+        when(evidence.create(anyInt(), any(), any())).thenReturn((type, alias) -> RuleEvidence.unknown());
+        try { recovery.reconcile(0, 1, new Date()); fail("Must fail instead of returning a cursor past unavailable evidence"); }
+        catch (APIException expected) { }
+        verifyNoInteractions(enrollment);
+    }
+
+	@Test public void adminCountersMustExcludeReplaysAndNoopMemberships() throws Exception {
+        recovery.setReconciliationDAO((after, limit) -> Collections.singletonList(1));
+        when(dao.getPublishedCareModelsForEnrollment()).thenReturn(Collections.singletonList(model));
+        org.openmrs.module.caremodels.model.CareModelMember member = new org.openmrs.module.caremodels.model.CareModelMember();
+        member.setStatus(org.openmrs.module.caremodels.model.CareModelMember.MemberStatus.ACTIVE);
+        when(members.getOpenMember(1, 3)).thenReturn(member);
+        when(enrollment.applyBackfillEnrollment(anyInt(), anyInt(), anyString(), any(), anyString(), any())).thenReturn(member);
+        assertEquals(0, recovery.reconcile(0, 1, new Date()).getAppliedDecisions());
+        when(members.getOpenMember(1, 3)).thenReturn(null);
+        when(members.getMemberBySource(anyInt(), anyInt(), anyString())).thenReturn(member);
+        assertEquals(0, recovery.reconcile(0, 1, new Date()).getAppliedDecisions());
+    }
 }
