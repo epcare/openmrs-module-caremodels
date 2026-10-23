@@ -39,19 +39,19 @@ import org.openmrs.module.caremodels.rule.RuleEvidenceProvider;
 import org.openmrs.module.caremodels.security.CareModelsPrivileges;
 
 public class CareModelReconciliationServiceTest {
-
+	
 	private static final Date NOW = new Date(1761033600000L);
-
+	
 	private final ObjectMapper mapper = new ObjectMapper();
-
+	
 	private final FakeReconciliationDAO reconciliationDAO = new FakeReconciliationDAO();
-
+	
 	private final FakeCareModelDAO modelDAO = new FakeCareModelDAO();
-
+	
 	private final RecordingEnrollmentService enrollmentService = new RecordingEnrollmentService();
-
+	
 	private CareModelReconciliationServiceImpl service;
-
+	
 	@Before
 	public void setup() {
 		service = new CareModelReconciliationServiceImpl();
@@ -61,16 +61,16 @@ public class CareModelReconciliationServiceTest {
 		service.setRuleEngine(new EnrollmentRuleEngine());
 		service.setEnrollmentService(enrollmentService);
 		service.setEvidenceFactory(new EnrollmentRuleEvidenceFactory() {
-
+			
 			@Override
 			public Integer resolvePatientId(String patientUuid) {
 				return null;
 			}
-
+			
 			@Override
 			public RuleEvidenceProvider create(Integer patientId, JsonNode definition, Date asOf) {
 				return new RuleEvidenceProvider() {
-
+					
 					@Override
 					public RuleEvidence resolve(String type, String alias) {
 						return RuleEvidence.present(true);
@@ -79,14 +79,14 @@ public class CareModelReconciliationServiceTest {
 			}
 		});
 	}
-
+	
 	@Test
 	public void shouldReturnResumableCursorAndDeterministicBackfillSources() throws Exception {
 		reconciliationDAO.patientIds.add(2);
 		reconciliationDAO.patientIds.add(4);
 		reconciliationDAO.patientIds.add(6);
 		modelDAO.models.add(model(3, "model-a", "1.2.0"));
-
+		
 		EnrollmentReconciliationResult first = service.reconcile(0, 2, NOW);
 		assertEquals(2, first.getProcessedPatients());
 		assertEquals(Integer.valueOf(4), first.getNextAfterPatientId());
@@ -94,13 +94,13 @@ public class CareModelReconciliationServiceTest {
 		assertEquals(2, first.getEvaluatedModels());
 		assertEquals(2, first.getAppliedDecisions());
 		assertEquals(2, enrollmentService.calls.size());
-
+		
 		String firstSource = enrollmentService.calls.get(0).sourceUuid;
 		service.reconcile(0, 2, NOW);
 		assertEquals(firstSource, enrollmentService.calls.get(2).sourceUuid);
 		assertEquals(Action.AUTO_ENROLL, enrollmentService.calls.get(0).action);
 	}
-
+	
 	@Test(expected = IllegalStateException.class)
 	public void shouldFailWithoutReturningAnAdvancedCursorForMalformedModel() throws Exception {
 		reconciliationDAO.patientIds.add(9);
@@ -111,12 +111,12 @@ public class CareModelReconciliationServiceTest {
 		modelDAO.models.add(malformed);
 		service.reconcile(null, null, NOW);
 	}
-
+	
 	@Test(expected = APIException.class)
 	public void shouldRejectUnboundedBatch() {
 		service.reconcile(0, 101, NOW);
 	}
-
+	
 	@Test
 	public void shouldRequireManagePrivilege() throws Exception {
 		Authorized authorized = CareModelReconciliationService.class.getMethod("reconcile", Integer.class, Integer.class,
@@ -124,7 +124,7 @@ public class CareModelReconciliationServiceTest {
 		assertNotNull(authorized);
 		assertEquals(CareModelsPrivileges.MANAGE_CARE_MODELS, authorized.value()[0]);
 	}
-
+	
 	private CareModel model(int id, String code, String version) throws Exception {
 		JsonNode definition = mapper.readTree("{\"enrollment\":{\"enabled\":true,\"rules\":["
 		        + "{\"id\":\"backfill-rule\",\"action\":\"AUTO_ENROLL\"," + "\"expression\":{\"literal\":\"TRUE\"}}]}}");
@@ -142,11 +142,11 @@ public class CareModelReconciliationServiceTest {
 		model.setConfiguration(envelope.toJson(mapper));
 		return model;
 	}
-
+	
 	private static final class FakeReconciliationDAO implements EnrollmentReconciliationDAO {
-
+		
 		private final List<Integer> patientIds = new ArrayList<Integer>();
-
+		
 		@Override
 		public List<Integer> getPatientIdsAfter(Integer afterPatientId, int limit) {
 			List<Integer> result = new ArrayList<Integer>();
@@ -159,18 +159,18 @@ public class CareModelReconciliationServiceTest {
 			return result;
 		}
 	}
-
+	
 	private static final class BackfillCall {
-
+		
 		private String sourceUuid;
-
+		
 		private Action action;
 	}
-
+	
 	private static final class RecordingEnrollmentService implements CareModelEnrollmentService {
-
+		
 		private final List<BackfillCall> calls = new ArrayList<BackfillCall>();
-
+		
 		@Override
 		public CareModelMember applyBackfillEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
 		        String sourceUuid, Date asOf) {
@@ -180,111 +180,111 @@ public class CareModelReconciliationServiceTest {
 			calls.add(call);
 			return new CareModelMember();
 		}
-
+		
 		@Override
 		public CareModelMember applyRuleEnrollment(Integer patientId, Integer careModelId, String ruleId, Action action,
 		        String sourceUuid, Date asOf) {
 			throw new UnsupportedOperationException();
 		}
-
+		
 		@Override
 		public int flagEnrollmentsForReview(Integer patientId, String sourceUuid, String reason, Date asOf) {
 			throw new UnsupportedOperationException();
 		}
-
+		
 		@Override
 		public CareModelMember confirmEnrollment(String memberUuid, String reason, Date asOf) {
 			throw new UnsupportedOperationException();
 		}
-
+		
 		@Override
 		public CareModelMember declineEnrollment(String memberUuid, String reason, Date asOf) {
 			throw new UnsupportedOperationException();
 		}
-
+		
 		@Override
 		public CareModelMember enrollManually(Integer patientId, Integer careModelId, String reason, Date asOf) {
 			throw new UnsupportedOperationException();
 		}
-
+		
 		@Override
 		public CareModelMember enrollManually(String patientUuid, String modelCodeOrUuid, String reason, Date asOf) {
 			throw new UnsupportedOperationException();
 		}
-
+		
 		@Override
 		public CareModelMember transitionEnrollment(String memberUuid, MemberStatus newStatus, String reason, Date asOf) {
 			throw new UnsupportedOperationException();
 		}
-
+		
 		@Override
 		public void onStartup() {
 		}
-
+		
 		@Override
 		public void onShutdown() {
 		}
 	}
-
+	
 	private static final class FakeCareModelDAO implements CareModelDAO {
-
+		
 		private final List<CareModel> models = new ArrayList<CareModel>();
-
+		
 		@Override
 		public List<CareModel> getPublishedCareModelsForEnrollment() {
 			return models;
 		}
-
+		
 		@Override
 		public CareModel saveCareModel(CareModel careModel) {
 			throw new UnsupportedOperationException();
 		}
-
+		
 		@Override
 		public CareModel getCareModelById(Integer id) {
 			return null;
 		}
-
+		
 		@Override
 		public CareModel getCareModelByIdForUpdate(Integer id) {
 			return null;
 		}
-
+		
 		@Override
 		public CareModel getCareModelByUuid(String uuid) {
 			return null;
 		}
-
+		
 		@Override
 		public CareModel getCareModelByCode(String code) {
 			return null;
 		}
-
+		
 		@Override
 		public CareModel getCareModelByCodeForUpdate(String code) {
 			return null;
 		}
-
+		
 		@Override
 		public List<CareModel> getCareModels(String qStr, CareModelStatus status, boolean includeRetired,
 		        Integer startIndex, Integer limit) {
 			return new ArrayList<CareModel>();
 		}
-
+		
 		@Override
 		public long getCareModelsCount(String qStr, CareModelStatus status, boolean includeRetired) {
 			return 0;
 		}
-
+		
 		@Override
 		public void purgeCareModel(CareModel careModel) {
 		}
-
+		
 		@Override
 		public CareModelRef getModelRef(Integer careModelId) {
 			return null;
 		}
-
+		
 		@Override
 		public List<CareModelRef> getModelRefs(Collection<Integer> careModelIds) {
 			return new ArrayList<CareModelRef>();
