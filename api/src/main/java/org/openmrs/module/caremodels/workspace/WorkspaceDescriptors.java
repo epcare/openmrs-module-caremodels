@@ -21,7 +21,7 @@ import org.openmrs.module.caremodels.resolver.ResolverSupport;
 
 /** Safe descriptors for references actually used by the selected, authorized tab. */
 public class WorkspaceDescriptors {
-	
+
 	public ObjectNode resolve(AuthorizedAccess access) {
         JsonNode definition = access.getPublishedDefinition();
         Set<String> formAliases = new LinkedHashSet<>();
@@ -70,7 +70,7 @@ public class WorkspaceDescriptors {
         }
         return result;
     }
-	
+
 	private ObjectNode resolveForm(JsonNode definition, String alias) {
 		ObjectNode descriptor = ResolverSupport.MAPPER.createObjectNode().put("alias", alias).put("available", false);
 		JsonNode declared = null;

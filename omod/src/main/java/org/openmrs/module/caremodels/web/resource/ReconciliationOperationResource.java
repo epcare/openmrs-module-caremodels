@@ -79,6 +79,15 @@ public class ReconciliationOperationResource extends DelegatingCrudResource<Reco
 	}
 	
 	@Override
+	public DelegatingResourceDescription getCreatableProperties() {
+		DelegatingResourceDescription description = new DelegatingResourceDescription();
+		description.addProperty("asOf");
+		description.addProperty("afterPatientId");
+		description.addProperty("limit");
+		return description;
+	}
+
+	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
 		description.addProperty("asOf");

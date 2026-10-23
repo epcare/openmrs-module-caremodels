@@ -16,43 +16,43 @@ import org.openmrs.module.caremodels.api.CareModelReconciliationService;
 import org.openmrs.module.caremodels.dto.EnrollmentReconciliationResult;
 
 public class ReconciliationOperationResourceTest {
-	
+
 	private RecordingService service;
-	
+
 	private ReconciliationOperationResource resource;
-	
+
 	@BeforeClass
 	public static void configureApplicationDataDirectory() {
 		System.setProperty("OPENMRS_APPLICATION_DATA_DIRECTORY", System.getProperty("java.io.tmpdir"));
 	}
-	
+
 	@Before
 	public void setup() {
 		service = new RecordingService();
 		resource = new ReconciliationOperationResource() {
-			
+
 			@Override
 			protected CareModelReconciliationService service() {
 				return service;
 			}
 		};
 	}
-	
+
 	@Test
 	public void shouldDispatchBatchAndReturnContinuationData() {
 		ReconciliationOperationRequest request = new ReconciliationOperationRequest();
 		request.setAfterPatientId(40);
 		request.setLimit(10);
-		
+
 		ReconciliationOperationRequest response = resource.save(request);
-		
+
 		assertEquals(Integer.valueOf(40), service.afterPatientId);
 		assertEquals(Integer.valueOf(10), service.limit);
 		assertEquals(Integer.valueOf(49), response.getNextAfterPatientId());
 		assertEquals(Integer.valueOf(10), response.getProcessedPatients());
 		assertEquals(Boolean.TRUE, response.getHasMore());
 	}
-	
+
 	@Test
 	public void postCreationMustBindCursorLimitAndEvaluationTime() {
 		Date asOf = new Date(1761033600000L);
@@ -68,20 +68,20 @@ public class ReconciliationOperationResourceTest {
 		assertEquals(Integer.valueOf(10), service.limit);
 		assertEquals(asOf, service.asOf);
 	}
-	
+
 	private static final class RecordingService implements CareModelReconciliationService {
-		
+
 		@Override
 		public int reconcileNextBatch(int limit) {
 			throw new UnsupportedOperationException();
 		}
-		
+
 		private Integer afterPatientId;
-		
+
 		private Integer limit;
-		
+
 		private Date asOf;
-		
+
 		@Override
 		public EnrollmentReconciliationResult reconcile(Integer cursor, Integer batchLimit, Date asOf) {
 			this.asOf = asOf;
@@ -96,11 +96,11 @@ public class ReconciliationOperationResourceTest {
 			result.setHasMore(true);
 			return result;
 		}
-		
+
 		@Override
 		public void onStartup() {
 		}
-		
+
 		@Override
 		public void onShutdown() {
 		}

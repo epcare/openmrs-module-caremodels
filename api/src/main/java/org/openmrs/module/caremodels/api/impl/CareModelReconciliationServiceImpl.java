@@ -38,53 +38,53 @@ import org.openmrs.module.caremodels.rule.RuleEvidenceProvider;
 import org.springframework.transaction.annotation.Transactional;
 
 public class CareModelReconciliationServiceImpl extends BaseOpenmrsService implements CareModelReconciliationService {
-	
+
 	static final int DEFAULT_LIMIT = 25;
-	
+
 	static final int MAX_LIMIT = 100;
-	
+
 	private EnrollmentReconciliationDAO reconciliationDAO;
-	
+
 	private CareModelDAO careModelDAO;
-	
+
 	private EnrollmentRuleEvidenceFactory evidenceFactory;
-	
+
 	private EnrollmentRuleEngine ruleEngine = new EnrollmentRuleEngine();
-	
+
 	private CareModelMemberDAO memberDAO;
-	
+
 	public void setMemberDAO(CareModelMemberDAO dao) {
 		this.memberDAO = dao;
 	}
-	
+
 	private CareModelEnrollmentService enrollmentService;
-	
+
 	private ObjectMapper objectMapper = new ObjectMapper();
-	
+
 	public void setReconciliationDAO(EnrollmentReconciliationDAO reconciliationDAO) {
 		this.reconciliationDAO = reconciliationDAO;
 	}
-	
+
 	public void setCareModelDAO(CareModelDAO careModelDAO) {
 		this.careModelDAO = careModelDAO;
 	}
-	
+
 	public void setEvidenceFactory(EnrollmentRuleEvidenceFactory evidenceFactory) {
 		this.evidenceFactory = evidenceFactory;
 	}
-	
+
 	public void setRuleEngine(EnrollmentRuleEngine ruleEngine) {
 		this.ruleEngine = ruleEngine;
 	}
-	
+
 	public void setEnrollmentService(CareModelEnrollmentService enrollmentService) {
 		this.enrollmentService = enrollmentService;
 	}
-	
+
 	public void setObjectMapper(ObjectMapper objectMapper) {
 		this.objectMapper = objectMapper;
 	}
-	
+
 	@Override @Transactional(timeout = 30)
     public int reconcileNextBatch(int limit) {
         if (limit < 1 || limit > 100) throw new IllegalArgumentException("Batch size must be 1..100");
@@ -123,7 +123,7 @@ public class CareModelReconciliationServiceImpl extends BaseOpenmrsService imple
             return patients.size();
         } catch (java.io.IOException | ClassCastException e) { throw new APIException("Invalid reconciliation checkpoint; reset it explicitly", e); }
     }
-	
+
 	/** Caller-managed scan: a failed patient is not included in the continuation cursor. */
 	@Override
 	@Transactional(timeout = 30)
@@ -161,7 +161,7 @@ public class CareModelReconciliationServiceImpl extends BaseOpenmrsService imple
 		}
 		return result;
 	}
-	
+
 	/** Shared by scheduled recovery and explicit administrator backfill. */
 	private boolean reconcileModel(Integer patientId, CareModel model,
             StorageEnvelope.PublishedSnapshot published, Date asOf) {
@@ -200,7 +200,7 @@ public class CareModelReconciliationServiceImpl extends BaseOpenmrsService imple
                 "Reconciliation flagged this enrollment for review", asOf) > 0;
         return false;
     }
-	
+
 	private String sourceUuid(Integer patientId, CareModel model, StorageEnvelope.PublishedSnapshot published,
 	        String ruleId, Action action, Date asOf) {
 		String modelKey = model.getUuid() == null ? model.getCode() : model.getUuid();
