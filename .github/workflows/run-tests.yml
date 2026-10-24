@@ -1,0 +1,57 @@
+name: Build with Maven
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform: [ ubuntu-latest ]
+        java-version: [ 8 ]
+
+    runs-on: ${{ matrix.platform }}
+    env:
+      PLATFORM: ${{ matrix.platform }}
+      JAVA_VERSION: ${{ matrix.java-version }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java-version }}
+
+      # mamba-core-api:3.0.0-SNAPSHOT is not published to any remote repo
+      # (openmrs-repo only hosts up to 2.0.1-SNAPSHOT), so build it from the
+      # fork first - mirrors the local `mvn install` of openmrs-module-mamba-core.
+      # Switch ref to main once add-support-for-external-etl-configs-load is merged.
+      - name: Check out mamba-core
+        uses: actions/checkout@v3
+        with:
+          repository: slubwama/openmrs-module-mamba-core
+          ref: add-support-for-external-etl-configs-load
+          path: mamba-core
+
+      - name: Install mamba-core SNAPSHOT
+        run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --file mamba-core/pom.xml
+
+      - name: Install dependencies
+        run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --show-version --file pom.xml
+
+      - name: Build with Maven
+        run: mvn test --batch-mode --file pom.xml
