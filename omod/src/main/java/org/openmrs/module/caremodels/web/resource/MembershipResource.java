@@ -44,7 +44,8 @@ public class MembershipResource extends DelegatingCrudResource<CareModelMembersh
 	
 	@Override
 	public CareModelMembershipDTO save(CareModelMembershipDTO delegate) {
-		throw new UnsupportedOperationException("Memberships are managed by the enrollment engine");
+		throw new UnsupportedOperationException(
+		        "Membership is read-only; enroll via POST /caremodels/membershipoperation with operation=manual");
 	}
 	
 	@Override

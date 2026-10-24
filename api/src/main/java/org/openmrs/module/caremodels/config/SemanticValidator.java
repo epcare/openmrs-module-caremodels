@@ -149,6 +149,15 @@ public class SemanticValidator {
 				checkAliasExists(dataSource, "formAlias", "forms", terminology, path, result);
 			}
 			
+			// A grouped source must reference an actual concept set; an N/A concept that is not a
+			// set can never qualify, regardless of its class.
+			if (Registry.DS_OBSERVATION_SET.equals(type)
+			        && !checker.conceptIsSet(terminology.path("concepts").path(dataSource.path("conceptAlias").asText())
+			                .asText(null))) {
+				result.addError(path + ".conceptAlias",
+				    "Parent concept must be an existing non-retired concept set with at least one member");
+			}
+			
 			// Windows and result caps must respect server bounds (schema bounds are the outer limits;
 			// tighter server-side caps may apply per resolver).
 			int windowDays = dataSource.path("windowDays").asInt(0);
@@ -370,6 +379,9 @@ public class SemanticValidator {
 		if (Registry.WIDGET_TREND_CHART.equals(type)
 		        && (!observation || !("NUMBER".equals(resultType) || "TIMESERIES".equals(resultType))))
 			result.addError(path + ".dataSource", "Chart requires declared numeric observation sources");
+		if ((Registry.WIDGET_LATEST_SET_RESULTS.equals(type) || Registry.WIDGET_SET_HISTORY_TRENDS.equals(type))
+		        && !Registry.DS_OBSERVATION_SET.equals(id))
+			result.addError(path + ".dataSource", "Set widgets require a grouped observation-set source");
 		String required = null;
 		if ("condition-list".equals(type) && !"conditions".equals(id) && !"encounter-diagnoses".equals(id))
 			required = "conditions or encounter-diagnoses";

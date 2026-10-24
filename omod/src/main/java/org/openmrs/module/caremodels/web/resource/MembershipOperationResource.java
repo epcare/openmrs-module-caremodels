@@ -106,6 +106,18 @@ public class MembershipOperationResource extends DelegatingCrudResource<Membersh
 	}
 	
 	@Override
+	public DelegatingResourceDescription getCreatableProperties() {
+		DelegatingResourceDescription description = new DelegatingResourceDescription();
+		description.addRequiredProperty("operation");
+		description.addProperty("patient");
+		description.addProperty("model");
+		description.addProperty("memberUuid");
+		description.addProperty("reason");
+		description.addProperty("transition");
+		return description;
+	}
+	
+	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
 		description.addProperty("operation");

@@ -5,6 +5,7 @@
   "registeredResolvers": [
     "latest-observation",
     "historical-observations",
+    "observation-set",
     "encounter-query",
     "program-state",
     "order-query",
@@ -287,6 +288,28 @@
       "liveHttpVerified": false,
       "widgetType": null,
       "componentVersion": null,
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 26,
+      "label": "Latest Set Results",
+      "backend": "Implemented/tested observation-set",
+      "limitation": "actual parent observation groups only; no synthetic latest; ranges from concept definition only",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "latest-set-results",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 27,
+      "label": "Set History & Trends",
+      "backend": "Implemented/tested observation-set",
+      "limitation": "distinct parent groups, bounded history; numeric-only charting, no interpolation",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "set-history-trends",
+      "componentVersion": "1.0.0",
       "newRendererEnabledByThisRelease": false
     }
   ]

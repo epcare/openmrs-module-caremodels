@@ -913,6 +913,215 @@
         "status",
         "fields"
       ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "observation-set"
+          ]
+        },
+        "resolverVersion": {
+          "const": "1.0.0"
+        },
+        "assessedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "no-records"
+          ]
+        },
+        "returnedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "total": {
+          "type": "null"
+        },
+        "availableFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "concept": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "units": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "programUuid": {
+          "type": "string"
+        },
+        "setConceptUuid": {
+          "type": "string"
+        },
+        "setDisplay": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "groups": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "parentObsUuid": {
+                "type": "string"
+              },
+              "effectiveDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "encounterUuid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "members": {
+                "type": "array",
+                "maxItems": 500,
+                "items": {
+                  "$ref": "#/$defs/setMember"
+                }
+              }
+            },
+            "required": [
+              "parentObsUuid",
+              "effectiveDate",
+              "members"
+            ]
+          }
+        }
+      },
+      "required": [
+        "type",
+        "resolverVersion",
+        "assessedAt",
+        "provenance",
+        "status",
+        "groups",
+        "setConceptUuid"
+      ]
     }
-  ]
+  ],
+  "$defs": {
+    "setMember": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "obsUuid": {
+          "type": "string"
+        },
+        "conceptUuid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conceptDisplay": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "effectiveTime": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "datatype": {
+          "enum": [
+            "NUMERIC",
+            "CODED",
+            "TEXT",
+            "DATE",
+            "DATETIME",
+            "BOOLEAN",
+            "UNKNOWN"
+          ]
+        },
+        "value": {},
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qualifier": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "comment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "referenceRange": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "low": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "high": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        },
+        "members": {
+          "type": "array",
+          "maxItems": 500,
+          "items": {
+            "$ref": "#/$defs/setMember"
+          }
+        }
+      },
+      "required": [
+        "obsUuid",
+        "conceptUuid",
+        "datatype",
+        "value"
+      ]
+    }
+  }
 }

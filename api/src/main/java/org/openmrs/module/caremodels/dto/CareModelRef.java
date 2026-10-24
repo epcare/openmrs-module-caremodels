@@ -12,8 +12,9 @@ package org.openmrs.module.caremodels.dto;
 import java.io.Serializable;
 
 /**
- * Metadata projection of a {@link CareModel}: loaded with a column projection so the large
- * {@code configuration} envelope is never selected. Used by the membership listing path.
+ * Metadata projection of a {@link org.openmrs.module.caremodels.model.CareModel}: loaded with a
+ * column projection so the large {@code configuration} envelope is never selected. Used by the
+ * membership listing path.
  */
 public class CareModelRef implements Serializable {
 	

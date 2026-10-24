@@ -8,12 +8,14 @@ package org.openmrs.module.caremodels.web.resource;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Date;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.openmrs.api.APIException;
 import org.openmrs.module.caremodels.api.CareModelEnrollmentService;
+import org.openmrs.module.caremodels.dto.ManualEnrollmentOption;
 import org.openmrs.module.caremodels.model.CareModelMember;
 import org.openmrs.module.caremodels.model.CareModelMember.MemberStatus;
 import org.openmrs.module.caremodels.rule.EnrollmentRuleEngine.Action;
@@ -134,6 +136,16 @@ public class MembershipOperationResourceTest {
 			memberUuid = uuid;
 			status = newStatus;
 			return member(newStatus);
+		}
+		
+		@Override
+		public List<ManualEnrollmentOption> listManualEnrollmentOptions(String patientUuid) {
+			throw new UnsupportedOperationException();
+		}
+		
+		@Override
+		public ManualEnrollmentOption evaluateManualEnrollment(String patientUuid, String modelCodeOrUuid) {
+			throw new UnsupportedOperationException();
 		}
 		
 		private CareModelMember member(MemberStatus memberStatus) {

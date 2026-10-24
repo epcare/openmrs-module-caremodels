@@ -19,6 +19,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.api.APIException;
 import org.openmrs.module.caremodels.api.CareModelEnrollmentService;
+import org.openmrs.module.caremodels.dto.ManualEnrollmentOption;
 import org.openmrs.module.caremodels.api.db.CareModelDAO;
 import org.openmrs.module.caremodels.config.StorageEnvelope;
 import org.openmrs.module.caremodels.dto.CareModelRef;
@@ -302,6 +303,16 @@ public class ClinicalChangeEnrollmentProcessorTest {
 		@Override
 		public CareModelMember transitionEnrollment(String memberUuid, CareModelMember.MemberStatus newStatus,
 		        String reason, Date asOf) throws APIException {
+			throw new UnsupportedOperationException();
+		}
+		
+		@Override
+		public List<ManualEnrollmentOption> listManualEnrollmentOptions(String patientUuid) {
+			throw new UnsupportedOperationException();
+		}
+		
+		@Override
+		public ManualEnrollmentOption evaluateManualEnrollment(String patientUuid, String modelCodeOrUuid) {
 			throw new UnsupportedOperationException();
 		}
 	}

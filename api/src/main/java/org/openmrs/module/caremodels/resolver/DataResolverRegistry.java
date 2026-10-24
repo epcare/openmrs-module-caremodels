@@ -26,6 +26,7 @@ public class DataResolverRegistry {
 	public DataResolverRegistry() {
 		register(new LatestObservationResolver());
 		register(new LatestObservationResolver("historical-observations", java.time.Clock.systemUTC()));
+		register(new ObservationSetResolver());
 		register(new EncounterResolver());
 		register(new ProgramStateResolver());
 		register(new PatientSummaryResolver());

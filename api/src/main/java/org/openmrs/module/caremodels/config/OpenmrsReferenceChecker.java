@@ -24,6 +24,9 @@ public interface OpenmrsReferenceChecker {
 	
 	boolean conceptExists(String uuid);
 	
+	/** True when the concept exists, is not retired and is an actual concept set (has members). */
+	boolean conceptIsSet(String uuid);
+	
 	boolean programExists(String uuid);
 	
 	boolean encounterTypeExists(String uuid);
@@ -41,6 +44,13 @@ public interface OpenmrsReferenceChecker {
 		public boolean conceptExists(String uuid) {
 			Concept concept = Context.getConceptService().getConceptByUuid(uuid);
 			return concept != null && !concept.isRetired();
+		}
+		
+		@Override
+		public boolean conceptIsSet(String uuid) {
+			Concept concept = Context.getConceptService().getConceptByUuid(uuid);
+			return concept != null && !concept.isRetired() && Boolean.TRUE.equals(concept.isSet())
+			        && concept.getSetMembers() != null && !concept.getSetMembers().isEmpty();
 		}
 		
 		@Override

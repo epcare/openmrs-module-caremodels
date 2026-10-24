@@ -10,7 +10,9 @@
 package org.openmrs.module.caremodels.api.impl;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -27,6 +29,7 @@ import org.openmrs.module.caremodels.api.CareModelEnrollmentService;
 import org.openmrs.module.caremodels.api.db.CareModelDAO;
 import org.openmrs.module.caremodels.api.db.CareModelMemberDAO;
 import org.openmrs.module.caremodels.config.StorageEnvelope;
+import org.openmrs.module.caremodels.dto.ManualEnrollmentOption;
 import org.openmrs.module.caremodels.model.CareModel;
 import org.openmrs.module.caremodels.model.CareModel.CareModelStatus;
 import org.openmrs.module.caremodels.model.CareModelMember;
@@ -267,6 +270,97 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 			throw new APIException("Patient or Care Model not found");
 		}
 		return enrollManually(patient.getPatientId(), model.getId(), reason, asOf);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public List<ManualEnrollmentOption> listManualEnrollmentOptions(String patientUuid) throws APIException {
+		assertText(patientUuid, "Patient UUID is required");
+		Patient patient = Context.getPatientService().getPatientByUuid(patientUuid.trim());
+		if (patient == null || Boolean.TRUE.equals(patient.getVoided())) {
+			throw new APIException("Patient not found");
+		}
+		List<ManualEnrollmentOption> options = new ArrayList<>();
+		for (CareModel model : careModelDAO.getPublishedCareModelsForEnrollment()) {
+			// Fail closed on the per-model view privilege: unauthorized models are never listed.
+			if (!Context.hasPrivilege(model.getPrivilege())) {
+				continue;
+			}
+			ManualEnrollmentOption option = evaluate(patient, model);
+			if (option != null) {
+				options.add(option);
+			}
+		}
+		return options;
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public ManualEnrollmentOption evaluateManualEnrollment(String patientUuid, String modelCodeOrUuid) throws APIException {
+		assertText(patientUuid, "Patient UUID is required");
+		assertText(modelCodeOrUuid, "Care Model code or UUID is required");
+		Patient patient = Context.getPatientService().getPatientByUuid(patientUuid.trim());
+		if (patient == null || Boolean.TRUE.equals(patient.getVoided())) {
+			throw new APIException("Patient not found");
+		}
+		CareModel model = findModel(modelCodeOrUuid.trim());
+		if (model == null) {
+			throw new APIException("Care Model not found");
+		}
+		if (!Context.hasPrivilege(model.getPrivilege())) {
+			throw new APIException("You do not have access to this Care Model");
+		}
+		ManualEnrollmentOption option = evaluate(patient, model);
+		if (option == null) {
+			throw new APIException("Manual enrollment is disabled for this Care Model");
+		}
+		return option;
+	}
+	
+	/** Policy-only eligibility: the same checks enrollManually re-runs inside its transaction. */
+	/**
+	 * Public for unit tests; policy-only and never persists. The interface exposes the
+	 * list/evaluate variants.
+	 */
+	public ManualEnrollmentOption evaluate(Patient patient, CareModel model) {
+		StorageEnvelope envelope = StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
+		StorageEnvelope.PublishedSnapshot published = envelope.getPublished();
+		if (published == null || published.getDefinition() == null) {
+			return null;
+		}
+		JsonNode definition = published.getDefinition();
+		JsonNode manual = definition.path("enrollment").path("manualEnrollment");
+		if (!manual.path("enabled").asBoolean(false)) {
+			return null;
+		}
+		ManualEnrollmentOption option = new ManualEnrollmentOption();
+		option.setModelUuid(model.getUuid());
+		option.setModelCode(model.getCode());
+		option.setDisplayLabel(definition.path("metadata").path("display").path("label").asText(model.getCode()));
+		option.setCategory(definition.path("metadata").path("category").asText(null));
+		option.setRequiresReason(manual.path("requiresReason").asBoolean(false));
+		option.setRequiresConfirmation(manual.path("requiresConfirmation").asBoolean(false));
+		Date now = new Date();
+		CareModelMember open = memberDAO.getOpenMember(patient.getId(), model.getId());
+		if (open != null) {
+			option.setOpenStatus(open.getStatus() == null ? null : open.getStatus().name());
+			option.setAlreadyEnrolled(true);
+			if (open.getStatus() == MemberStatus.PENDING) {
+				option.setEligible(true);
+				option.setReason("Pending proposal; confirming enrollment activates it");
+			} else {
+				option.setEligible(false);
+				option.setReason("Patient already has an open episode in this Care Model");
+			}
+			return option;
+		}
+		if (!canReenroll(patient.getId(), model.getId(), definition, now)) {
+			option.setEligible(false);
+			option.setReason("Reenrollment is disabled or its cooldown has not elapsed");
+			return option;
+		}
+		option.setEligible(true);
+		return option;
 	}
 	
 	@Override

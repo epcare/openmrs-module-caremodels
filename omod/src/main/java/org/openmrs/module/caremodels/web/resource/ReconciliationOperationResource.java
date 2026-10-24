@@ -23,16 +23,16 @@ import org.openmrs.module.webservices.rest.web.response.ResponseException;
 /** POST-only, cursor-based missed-event recovery endpoint for administrators. */
 @Resource(name = RestConstants.VERSION_1 + "/caremodels/reconciliationoperation", supportedClass = ReconciliationOperationRequest.class, supportedOpenmrsVersions = { "1.8 - 9.0.*" })
 public class ReconciliationOperationResource extends DelegatingCrudResource<ReconciliationOperationRequest> {
-
+	
 	protected CareModelReconciliationService service() {
 		return Context.getService(CareModelReconciliationService.class);
 	}
-
+	
 	@Override
 	public ReconciliationOperationRequest newDelegate() {
 		return new ReconciliationOperationRequest();
 	}
-
+	
 	@Override
 	public ReconciliationOperationRequest save(ReconciliationOperationRequest request) {
 		Date asOf = request.getAsOf() == null ? new Date() : request.getAsOf();
@@ -47,28 +47,28 @@ public class ReconciliationOperationResource extends DelegatingCrudResource<Reco
 		result.setHasMore(batch.isHasMore());
 		return result;
 	}
-
+	
 	@Override
 	public ReconciliationOperationRequest getByUniqueId(String uniqueId) {
 		throw new ObjectNotFoundException();
 	}
-
+	
 	@Override
 	protected void delete(ReconciliationOperationRequest delegate, String reason, RequestContext context)
 	        throws ResponseException {
 		throw new UnsupportedOperationException("Delete is not supported for reconciliationoperation");
 	}
-
+	
 	@Override
 	public void purge(ReconciliationOperationRequest delegate, RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("Purge is not supported for reconciliationoperation");
 	}
-
+	
 	@Override
 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
 		throw new UnsupportedOperationException("List is not supported for reconciliationoperation");
 	}
-
+	
 	@Override
 	public DelegatingResourceDescription getCreatableProperties() {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
@@ -77,7 +77,7 @@ public class ReconciliationOperationResource extends DelegatingCrudResource<Reco
 		description.addProperty("limit");
 		return description;
 	}
-
+	
 	@Override
 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
 		DelegatingResourceDescription description = new DelegatingResourceDescription();
@@ -92,7 +92,7 @@ public class ReconciliationOperationResource extends DelegatingCrudResource<Reco
 		description.addProperty("hasMore");
 		return description;
 	}
-
+	
 	@Override
 	public String getResourceVersion() {
 		return "1.0";
