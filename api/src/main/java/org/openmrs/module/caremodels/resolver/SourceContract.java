@@ -49,7 +49,15 @@ public final class SourceContract {
         if (registered && !"1.0.0".equals(source.path("resolverVersion").asText()))
             result.addError(path + ".resolverVersion", "Unsupported resolver version");
         String kind = resolver.getReferenceField();
-        Set<String> allowed = new HashSet<>(Arrays.asList("type", "resultType", "maxResults", "windowDays", "includeVoided"));
+        Set<String> allowed = new HashSet<>(Arrays.asList("type", "resultType", "maxResults", "windowDays", "includeVoided", "label", "description"));
+        if (id.equals("observation-set")) allowed.add("members");
+        if (id.equals("observation-set") && source.has("members")) {
+            if (!source.path("members").isArray() || source.path("members").size() == 0)
+                result.addError(path + ".members", "Declared members must be a non-empty concept uuid list");
+            for (JsonNode member : source.path("members"))
+                if (!member.isTextual() || member.asText().isEmpty())
+                    result.addError(path + ".members", "Members must be concept uuids");
+        }
         if (kind != null) {
             allowed.add(kind);
             if (!source.hasNonNull(kind) || source.path(kind).asText().isEmpty()) result.addError(path + "." + kind, "Resource alias required");

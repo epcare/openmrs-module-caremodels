@@ -16,7 +16,8 @@
         "program-state",
         "encounter-query",
         "order-query",
-        "registered"
+        "registered",
+        "observation-set"
       ]
     },
     "conceptAlias": {
@@ -92,6 +93,25 @@
           "deathDate"
         ]
       }
+    },
+    "label": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "members": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 36
+      }
     }
   },
   "allOf": [
@@ -117,7 +137,8 @@
           "type": {
             "enum": [
               "latest-observation",
-              "historical-observations"
+              "historical-observations",
+              "observation-set"
             ]
           }
         }
@@ -179,7 +200,8 @@
               "historical-observations",
               "program-state",
               "encounter-query",
-              "order-query"
+              "order-query",
+              "observation-set"
             ]
           }
         }

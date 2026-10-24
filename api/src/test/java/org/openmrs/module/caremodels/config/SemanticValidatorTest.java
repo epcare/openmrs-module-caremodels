@@ -34,6 +34,11 @@ public class SemanticValidatorTest {
 		}
 		
 		@Override
+		public boolean conceptIsSet(String uuid) {
+			return true;
+		}
+		
+		@Override
 		public boolean programExists(String uuid) {
 			return true;
 		}

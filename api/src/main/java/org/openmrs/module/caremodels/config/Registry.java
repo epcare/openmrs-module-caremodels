@@ -39,6 +39,10 @@ public final class Registry {
 	
 	public static final String WIDGET_ACTION_PANEL = "action-panel";
 	
+	public static final String WIDGET_LATEST_SET_RESULTS = "latest-set-results";
+	
+	public static final String WIDGET_SET_HISTORY_TRENDS = "set-history-trends";
+	
 	// ========================
 	// Action handler types (allowlisted)
 	// ========================
@@ -67,6 +71,8 @@ public final class Registry {
 	
 	public static final String DS_ORDER_QUERY = "order-query";
 	
+	public static final String DS_OBSERVATION_SET = "observation-set";
+	
 	public static final String DS_REGISTERED = "registered";
 	
 	// ========================
@@ -77,13 +83,14 @@ public final class Registry {
 	
 	public static final Set<String> WIDGET_TYPES = unmodifiable(WIDGET_METRIC, WIDGET_TREND_CHART, WIDGET_CLINICAL_TABLE,
 	    WIDGET_TIMELINE, WIDGET_FORM_LAUNCHER, WIDGET_ACTION_PANEL, "text-note", "section-heading", "divider", "spacer",
-	    "static-callout", "condition-list", "medication-summary", "program-summary", "patient-summary", "care-plan");
+	    "static-callout", "condition-list", "medication-summary", "program-summary", "patient-summary", "care-plan",
+	    WIDGET_LATEST_SET_RESULTS, WIDGET_SET_HISTORY_TRENDS);
 	
 	public static final Set<String> ACTION_TYPES = unmodifiable(ACTION_LAUNCH_FORM, ACTION_NAVIGATE_INTERNAL,
 	    ACTION_OPEN_ORDER_ENTRY, ACTION_OPEN_APPOINTMENTS, ACTION_ENROLLMENT_TRANSITION);
 	
 	public static final Set<String> DATA_SOURCE_TYPES = unmodifiable(DS_LATEST_OBSERVATION, DS_HISTORICAL_OBSERVATIONS,
-	    DS_PROGRAM_STATE, DS_ENCOUNTER_QUERY, DS_ORDER_QUERY, DS_REGISTERED);
+	    DS_PROGRAM_STATE, DS_ENCOUNTER_QUERY, DS_ORDER_QUERY, DS_REGISTERED, DS_OBSERVATION_SET);
 	
 	private static Set<String> unmodifiable(String... values) {
 		Set<String> set = new LinkedHashSet<String>();

@@ -273,7 +273,9 @@
                         "medication-summary",
                         "program-summary",
                         "patient-summary",
-                        "care-plan"
+                        "care-plan",
+                        "latest-set-results",
+                        "set-history-trends"
                       ]
                     },
                     "componentVersion": {
