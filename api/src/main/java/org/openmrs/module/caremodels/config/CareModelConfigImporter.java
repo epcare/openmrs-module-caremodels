@@ -25,8 +25,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Startup bootstrap for shipped care models. Scans {@code app data
- * dir}/configuration/caremodel/<content pack>/*.json}, where each file wraps a storage envelope
- * with its model identity:
+ * dir}/configuration/caremodel/&lt;content pack&gt;/*.json}, where each file wraps a storage
+ * envelope with its model identity:
  * 
  * <pre>
  * {

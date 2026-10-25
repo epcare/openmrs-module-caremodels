@@ -1,4 +1,4 @@
-# Widget backend capabilities — release 1.0.0-SNAPSHOT
+# Widget backend capabilities — release 1.0.0
 
 ## Initial inspection (2026-10-21)
 
