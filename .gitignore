@@ -75,3 +75,7 @@ roughwork/
 DECISIONS.md
 IMPLEMENTATION_PLAN.md
 REST_API.md
+docs/
+designs/
+.agents/
+configuration/
