@@ -75,4 +75,13 @@ public interface CareModelDAO {
     default java.util.List<Integer> getPatientIdsAfter(int patientId, int upperId, int limit) { throw new UnsupportedOperationException(); }
     default int getMaximumPatientId() { throw new UnsupportedOperationException(); }
     default org.openmrs.GlobalProperty getReconciliationCursorForUpdate() { throw new UnsupportedOperationException(); }
+
+    /**
+     * Patients with recorded clinical activity (encounter, observation or program enrollment) at or
+     * after {@code activeSince}, ordered by ascending patient id, globally deduplicated across the
+     * three sources so the reconciliation cursor stays strictly monotonic. Bounds missed-event
+     * recovery to patients that could actually have a recent unprocessed event.
+     */
+    default java.util.List<Integer> getActivePatientIdsAfter(int patientId, int upperId, java.util.Date activeSince,
+            int limit) { throw new UnsupportedOperationException(); }
 }

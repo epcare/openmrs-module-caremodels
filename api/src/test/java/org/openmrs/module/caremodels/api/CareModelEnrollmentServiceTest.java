@@ -503,6 +503,11 @@ public class CareModelEnrollmentServiceTest {
 		private final List<CareModelMember> members = new ArrayList<CareModelMember>();
 		
 		@Override
+		public long countMembersForModel(Integer careModelId) {
+			return 0;
+		}
+		
+		@Override
 		public CareModelMember saveCareModelMember(CareModelMember member) {
 			if (member.getId() == null) {
 				member.setId(members.size() + 1);

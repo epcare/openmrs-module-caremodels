@@ -55,7 +55,7 @@ public class WorkspaceResource extends DelegatingCrudResource<WorkspaceTab> {
 	
 	@Override
 	public WorkspaceTab getByUniqueId(String uniqueId) {
-		throw new UnsupportedOperationException("Use ?patient=&model=&tab=");
+		throw new org.openmrs.module.webservices.rest.web.response.ObjectNotFoundException();
 	}
 	
 	/** RESTWS dispatches requests containing q/patient/model/tab filters through search(). */

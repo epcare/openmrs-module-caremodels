@@ -28,9 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
 public interface CareModelMemberService extends OpenmrsService {
 	
 	@Transactional(readOnly = true)
+	@Authorized(CareModelsPrivileges.VIEW_CARE_MODELS)
 	CareModelMember getMember(Integer careModelMemberId) throws APIException;
 	
 	@Transactional(readOnly = true)
+	@Authorized(CareModelsPrivileges.VIEW_CARE_MODELS)
 	CareModelMember getMemberByUuid(String uuid) throws APIException;
 	
 	/**
@@ -38,23 +40,29 @@ public interface CareModelMemberService extends OpenmrsService {
 	 * the membership listing; callers must enforce patient access and model privileges themselves.
 	 */
 	@Transactional(readOnly = true)
+	@Authorized(CareModelsPrivileges.VIEW_CARE_MODELS)
 	CareModelMember getCurrentMember(Integer patientId, Integer careModelId) throws APIException;
 	
 	@Transactional(readOnly = true)
+	@Authorized(CareModelsPrivileges.VIEW_CARE_MODELS)
 	List<CareModelMember> getMembersByPatientAndModel(Integer patientId, Integer careModelId) throws APIException;
 	
 	/** ACTIVE non-voided episodes for a patient; the sole source of patient outer tabs. */
 	@Transactional(readOnly = true)
+	@Authorized(CareModelsPrivileges.VIEW_CARE_MODELS)
 	List<CareModelMember> getActiveMembersByPatient(Integer patientId) throws APIException;
 	
 	@Transactional(readOnly = true)
+	@Authorized(CareModelsPrivileges.VIEW_CARE_MODELS)
 	List<CareModelMember> getActiveMembersByModel(Integer careModelId) throws APIException;
 	
 	@Transactional(readOnly = true)
+	@Authorized(CareModelsPrivileges.VIEW_CARE_MODELS)
 	List<CareModelMember> getMembersByPatientAndStatus(Integer patientId, MemberStatus status, boolean includeVoided,
 	        Integer startIndex, Integer limit) throws APIException;
 	
 	@Transactional(readOnly = true)
+	@Authorized(CareModelsPrivileges.VIEW_CARE_MODELS)
 	long getMembersCount(Integer patientId, MemberStatus status, boolean includeVoided) throws APIException;
 	
 	/**

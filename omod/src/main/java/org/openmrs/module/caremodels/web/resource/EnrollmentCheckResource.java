@@ -71,7 +71,7 @@ public class EnrollmentCheckResource extends DelegatingCrudResource<EnrollmentCh
 	
 	@Override
 	public EnrollmentCheckRequest getByUniqueId(String uniqueId) {
-		throw new UnsupportedOperationException("Enrollment checks are submitted per patient and model");
+		throw new org.openmrs.module.webservices.rest.web.response.ObjectNotFoundException();
 	}
 	
 	@Override

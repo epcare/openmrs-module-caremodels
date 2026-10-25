@@ -185,6 +185,56 @@ public class HibernateCareModelDAO implements CareModelDAO {
 	}
 	
 	@Override
+	@SuppressWarnings("unchecked")
+	public List<Integer> getActivePatientIdsAfter(int patientId, int upperId, java.util.Date activeSince, int limit) {
+		if (limit < 1 || limit > 100)
+			throw new IllegalArgumentException("Invalid patient batch limit");
+		List<List<Integer>> streams = new java.util.ArrayList<List<Integer>>(3);
+		streams.add(activePatientIds(org.openmrs.Encounter.class, "patient.id", "encounterDatetime", patientId, upperId,
+		    activeSince, limit));
+		streams.add(activePatientIds(org.openmrs.Obs.class, "personId", "obsDatetime", patientId, upperId, activeSince,
+		    limit));
+		streams.add(activePatientIds(org.openmrs.PatientProgram.class, "patient.id", "dateEnrolled", patientId, upperId,
+		    activeSince, limit));
+		// k-way merge: each stream is ascending, so consuming the global minimum keeps the merged
+		// output strictly ascending (the reconciliation cursor requires monotonic ids)
+		int[] position = new int[streams.size()];
+		List<Integer> merged = new java.util.ArrayList<Integer>(limit);
+		while (merged.size() < limit) {
+			Integer minimum = null;
+			for (int s = 0; s < streams.size(); s++) {
+				List<Integer> stream = streams.get(s);
+				if (position[s] < stream.size()) {
+					Integer candidate = stream.get(position[s]);
+					if (minimum == null || candidate < minimum) {
+						minimum = candidate;
+					}
+				}
+			}
+			if (minimum == null) {
+				break;
+			}
+			for (int s = 0; s < streams.size(); s++) {
+				List<Integer> stream = streams.get(s);
+				while (position[s] < stream.size() && minimum.equals(stream.get(position[s]))) {
+					position[s]++;
+				}
+			}
+			merged.add(minimum);
+		}
+		return merged;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private List<Integer> activePatientIds(Class<?> entity, String idProperty, String activityProperty, int patientId,
+	        int upperId, java.util.Date activeSince, int limit) {
+		return sessionFactory.getCurrentSession().createCriteria(entity).add(Restrictions.gt(idProperty, patientId))
+		        .add(Restrictions.le(idProperty, upperId)).add(Restrictions.ge(activityProperty, activeSince))
+		        .setProjection(Projections.distinct(Projections.property(idProperty))).addOrder(Order.asc(idProperty))
+		        .setMaxResults(limit).list();
+	}
+	
+	@Override
 	public int getMaximumPatientId() {
 		Integer maximum = (Integer) sessionFactory.getCurrentSession().createCriteria(org.openmrs.Patient.class)
 		        .setProjection(Projections.max("patientId")).uniqueResult();

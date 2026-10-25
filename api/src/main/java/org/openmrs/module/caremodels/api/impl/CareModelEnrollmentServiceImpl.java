@@ -29,6 +29,7 @@ import org.openmrs.module.caremodels.api.CareModelEnrollmentService;
 import org.openmrs.module.caremodels.api.db.CareModelDAO;
 import org.openmrs.module.caremodels.api.db.CareModelMemberDAO;
 import org.openmrs.module.caremodels.config.StorageEnvelope;
+import org.openmrs.module.caremodels.config.StorageEnvelopeCache;
 import org.openmrs.module.caremodels.dto.ManualEnrollmentOption;
 import org.openmrs.module.caremodels.model.CareModel;
 import org.openmrs.module.caremodels.model.CareModel.CareModelStatus;
@@ -56,6 +57,8 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 	
 	private ObjectMapper objectMapper = new ObjectMapper();
 	
+	private StorageEnvelopeCache envelopeCache = new StorageEnvelopeCache();
+	
 	private EnrollmentActorProvider actorProvider = new OpenmrsEnrollmentActorProvider();
 	
 	private EnrollmentCommandAuthorizer commandAuthorizer = new OpenmrsEnrollmentCommandAuthorizer();
@@ -70,6 +73,10 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 	
 	public void setObjectMapper(ObjectMapper objectMapper) {
 		this.objectMapper = objectMapper;
+	}
+	
+	public void setEnvelopeCache(StorageEnvelopeCache envelopeCache) {
+		this.envelopeCache = envelopeCache;
 	}
 	
 	public void setActorProvider(EnrollmentActorProvider actorProvider) {
@@ -266,8 +273,11 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		assertText(modelCodeOrUuid, "Care Model code or UUID is required");
 		Patient patient = Context.getPatientService().getPatientByUuid(patientUuid.trim());
 		CareModel model = findModel(modelCodeOrUuid.trim());
-		if (patient == null || Boolean.TRUE.equals(patient.getVoided()) || model == null) {
-			throw new APIException("Patient or Care Model not found");
+		// one non-committal denial for both cases, so model codes cannot be enumerated by
+		// unauthorized callers (same contract as authorizeWorkspace)
+		if (patient == null || Boolean.TRUE.equals(patient.getVoided()) || model == null
+		        || !Context.hasPrivilege(model.getPrivilege())) {
+			throw new APIException("Patient or Care Model not found or not authorized");
 		}
 		return enrollManually(patient.getPatientId(), model.getId(), reason, asOf);
 	}
@@ -304,11 +314,10 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 			throw new APIException("Patient not found");
 		}
 		CareModel model = findModel(modelCodeOrUuid.trim());
-		if (model == null) {
-			throw new APIException("Care Model not found");
-		}
-		if (!Context.hasPrivilege(model.getPrivilege())) {
-			throw new APIException("You do not have access to this Care Model");
+		// one non-committal denial for both cases, so model codes cannot be enumerated by
+		// unauthorized callers (same contract as authorizeWorkspace)
+		if (model == null || !Context.hasPrivilege(model.getPrivilege())) {
+			throw new APIException("Care Model not found or not authorized");
 		}
 		ManualEnrollmentOption option = evaluate(patient, model);
 		if (option == null) {
@@ -323,7 +332,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 	 * list/evaluate variants.
 	 */
 	public ManualEnrollmentOption evaluate(Patient patient, CareModel model) {
-		StorageEnvelope envelope = StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
+		StorageEnvelope envelope = envelopeCache.get(model.getId(), model.getConfiguration());
 		StorageEnvelope.PublishedSnapshot published = envelope.getPublished();
 		if (published == null || published.getDefinition() == null) {
 			return null;
@@ -402,7 +411,7 @@ public class CareModelEnrollmentServiceImpl extends BaseOpenmrsService implement
 		if (model.getStatus() != CareModelStatus.PUBLISHED || Boolean.TRUE.equals(model.getRetired())) {
 			throw new APIException("Enrollment requires a published, non-retired Care Model");
 		}
-		StorageEnvelope envelope = StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
+		StorageEnvelope envelope = envelopeCache.get(model.getId(), model.getConfiguration());
 		if (envelope.getPublished() == null || envelope.getPublished().getDefinition() == null) {
 			throw new APIException("Care Model has no published definition");
 		}

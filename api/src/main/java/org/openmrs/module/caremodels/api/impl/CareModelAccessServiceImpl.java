@@ -26,6 +26,7 @@ import org.openmrs.module.caremodels.api.CareModelAccessService;
 import org.openmrs.module.caremodels.api.CareModelMemberService;
 import org.openmrs.module.caremodels.api.db.CareModelDAO;
 import org.openmrs.module.caremodels.config.StorageEnvelope;
+import org.openmrs.module.caremodels.config.StorageEnvelopeCache;
 import org.openmrs.module.caremodels.dto.CareModelMembershipDTO;
 import org.openmrs.module.caremodels.dto.CareModelRef;
 import org.openmrs.module.caremodels.model.CareModel;
@@ -43,6 +44,10 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 	
 	private ObjectMapper objectMapper = new ObjectMapper();
 	
+	private StorageEnvelopeCache envelopeCache = new StorageEnvelopeCache();
+	
+	private org.openmrs.module.caremodels.rule.RuleExpressionEvaluator ruleExpressionEvaluator = new org.openmrs.module.caremodels.rule.RuleExpressionEvaluator();
+	
 	private CareModelMemberService memberService;
 	
 	private CareModelDAO careModelDAO;
@@ -53,6 +58,14 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 	
 	public void setCareModelDAO(CareModelDAO careModelDAO) {
 		this.careModelDAO = careModelDAO;
+	}
+	
+	public void setEnvelopeCache(StorageEnvelopeCache envelopeCache) {
+		this.envelopeCache = envelopeCache;
+	}
+	
+	public void setRuleExpressionEvaluator(org.openmrs.module.caremodels.rule.RuleExpressionEvaluator evaluator) {
+		this.ruleExpressionEvaluator = evaluator;
 	}
 	
 	@Override
@@ -163,10 +176,11 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			throw new APIException("No active membership in this Care Model");
 		}
 		
-		// only now is the published definition loaded, and only for this model
+		// only now is the published definition loaded, and only for this model; the parse is
+		// served from the bounded envelope cache when the configuration is unchanged
 		StorageEnvelope envelope;
 		try {
-			envelope = StorageEnvelope.fromJson(objectMapper, model.getConfiguration());
+			envelope = envelopeCache.get(model.getId(), model.getConfiguration());
 		}
 		catch (IllegalStateException e) {
 			throw new APIException("Stored Care Model envelope is not valid JSON", e);
@@ -199,7 +213,7 @@ public class CareModelAccessServiceImpl extends BaseOpenmrsService implements Ca
 			    org.openmrs.module.caremodels.event.EnrollmentRuleEvidenceFactory.class);
 			java.util.Date asOf = new java.util.Date();
 			if (evidence == null
-			        || new org.openmrs.module.caremodels.rule.RuleExpressionEvaluator().evaluate(tab.path("visibilityRule"),
+			        || ruleExpressionEvaluator.evaluate(tab.path("visibilityRule"),
 			            evidence.create(patient.getId(), published, asOf), asOf) != org.openmrs.module.caremodels.rule.TriState.TRUE)
 				throw new APIException("Requested tab is not authorized");
 		}

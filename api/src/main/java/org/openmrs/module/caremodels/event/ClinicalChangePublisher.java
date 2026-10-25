@@ -17,6 +17,11 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 /**
  * Delivers clinical changes after commit, or immediately when the service transaction has already
  * completed.
+ * <p>
+ * Failure logging here is deliberately constrained to the exception CLASS NAME only (no patient,
+ * source or exception-message detail, no attached throwable): listener failures surface clinical
+ * provenance in their messages, and the clinical-change path must never write patient-identifying
+ * detail into logs. {@code ClinicalEventLoggingTest} enforces this contract.
  */
 public class ClinicalChangePublisher {
 	

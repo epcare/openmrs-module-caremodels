@@ -45,12 +45,18 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 	
 	private CareModelDAO dao;
 	
+	private org.openmrs.module.caremodels.api.db.CareModelMemberDAO memberDAO;
+	
 	public CareModelDAO getDao() {
 		return dao;
 	}
 	
 	public void setDao(CareModelDAO dao) {
 		this.dao = dao;
+	}
+	
+	public void setMemberDAO(org.openmrs.module.caremodels.api.db.CareModelMemberDAO memberDAO) {
+		this.memberDAO = memberDAO;
 	}
 	
 	@Override
@@ -95,6 +101,14 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 			// be treated as public.
 			throw new APIException("Care Model required view privilege is required");
 		}
+		if (!referenceChecker.privilegeExists(careModel.getPrivilege().trim())) {
+			// Not an error: shipped imports at startup may legitimately precede privilege
+			// provisioning. The model stays invisible (fail closed) until the privilege exists,
+			// and publication re-checks registration.
+			log.warn(
+			    "Care Model '{}' names view privilege '{}' which is not registered; it stays invisible until the privilege exists",
+			    careModel.getCode(), careModel.getPrivilege());
+		}
 		if (careModel.getConfiguration() == null || careModel.getConfiguration().trim().isEmpty()) {
 			throw new APIException("Care Model configuration envelope is required");
 		}
@@ -104,6 +118,12 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 	@Override
 	@Transactional
 	public void purgeCareModel(CareModel careModel) throws APIException {
+		// A model with any episode history cannot be purged: that would destroy the enrollment
+		// audit trail. Retire it instead.
+		if (memberDAO != null && careModel.getId() != null && memberDAO.countMembersForModel(careModel.getId()) > 0) {
+			throw new APIException("Cannot purge Care Model '" + careModel.getCode()
+			        + "': it has membership episodes. Retire it instead.");
+		}
 		dao.purgeCareModel(careModel);
 	}
 	

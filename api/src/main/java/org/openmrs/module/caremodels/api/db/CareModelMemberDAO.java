@@ -63,4 +63,10 @@ public interface CareModelMemberDAO {
 	void unvoidCareModelMember(CareModelMember member);
 	
 	void purgeCareModelMember(CareModelMember member);
+	
+	/**
+	 * Count of ALL episodes (including voided) for a model — the purge guard: a model with any
+	 * membership history must not be purged, because that would destroy the enrollment audit trail.
+	 */
+	long countMembersForModel(Integer careModelId);
 }

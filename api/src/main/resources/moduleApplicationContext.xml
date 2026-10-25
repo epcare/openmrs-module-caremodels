@@ -10,6 +10,11 @@
     <!-- Enable annotation processing for @Autowired and other annotations -->
     <context:annotation-config/>
 
+    <!-- Bounded LRU of parsed storage envelopes keyed by care model id; entries validated by
+         configuration string equality, so publish/import changes are picked up immediately. -->
+    <bean id="caremodels.StorageEnvelopeCache"
+          class="org.openmrs.module.caremodels.config.StorageEnvelopeCache" />
+
     <bean id="caremodels.DataResolverRegistry" class="org.openmrs.module.caremodels.resolver.DataResolverRegistry">
         <property name="transactionManager" ref="transactionManager" />
     </bean>
@@ -47,6 +52,7 @@
         <property name="target">
             <bean class="org.openmrs.module.caremodels.api.impl.CareModelServiceImpl">
                 <property name="dao" ref="caremodels.HibernateCareModelDAO" />
+                <property name="memberDAO" ref="caremodels.HibernateCareModelMemberDAO" />
                 <property name="resolverRegistry" ref="caremodels.DataResolverRegistry" />
             </bean>
         </property>
@@ -94,6 +100,7 @@
                 <property name="ruleEngine" ref="caremodels.EnrollmentRuleEngine" />
                 <property name="evidenceFactory" ref="caremodels.EnrollmentRuleEvidenceFactory" />
                 <property name="enrollmentService" ref="caremodels.CareModelEnrollmentService" />
+                <property name="envelopeCache" ref="caremodels.StorageEnvelopeCache" />
             </bean>
         </property>
         <property name="transactionAttributeSource" ref="transactionAttributeSource" />
@@ -130,6 +137,7 @@
                 <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
                 <property name="memberDAO" ref="caremodels.HibernateCareModelMemberDAO" />
                 <property name="commandAuthorizer" ref="caremodels.EnrollmentCommandAuthorizer" />
+                <property name="envelopeCache" ref="caremodels.StorageEnvelopeCache" />
             </bean>
         </property>
         <property name="preInterceptors" ref="serviceInterceptors" />
@@ -156,6 +164,8 @@
                 <property name="evidenceFactory" ref="caremodels.EnrollmentRuleEvidenceFactory" />
                 <property name="ruleEngine" ref="caremodels.EnrollmentRuleEngine" />
                 <property name="enrollmentService" ref="caremodels.CareModelEnrollmentService" />
+                <property name="envelopeCache" ref="caremodels.StorageEnvelopeCache" />
+                <property name="transactionManager" ref="transactionManager" />
             </bean>
         </property>
         <property name="preInterceptors" ref="serviceInterceptors" />
@@ -178,6 +188,8 @@
             <bean class="org.openmrs.module.caremodels.api.impl.CareModelAccessServiceImpl">
                 <property name="memberService" ref="caremodels.CareModelMemberService" />
                 <property name="careModelDAO" ref="caremodels.HibernateCareModelDAO" />
+                <property name="envelopeCache" ref="caremodels.StorageEnvelopeCache" />
+                <property name="ruleExpressionEvaluator" ref="caremodels.RuleExpressionEvaluator" />
             </bean>
         </property>
         <property name="preInterceptors" ref="serviceInterceptors" />

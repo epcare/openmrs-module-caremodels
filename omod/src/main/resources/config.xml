@@ -61,6 +61,18 @@
 	</globalProperty>
 
 	<globalProperty>
+		<property>caremodels.reconciliation.activityWindowDays</property>
+		<defaultValue>90</defaultValue>
+		<description>
+			Look-back window (days) for reconciliation candidate selection: only patients with an
+			encounter, observation or program enrollment inside the window are evaluated, so
+			recovery never rescans the whole population. Set to 0 to scan all patients (previous
+			behavior). Events older than the window when a model cycle starts are not recoverable
+			through the scheduled task.
+		</description>
+	</globalProperty>
+
+	<globalProperty>
 		<property>caremodels.reconciliation.cursor</property>
 		<defaultValue>{}</defaultValue>
 		<description>

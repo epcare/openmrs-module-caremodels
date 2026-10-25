@@ -7,7 +7,9 @@ package org.openmrs.module.caremodels.api.impl;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -24,6 +26,7 @@ import org.openmrs.module.caremodels.api.db.CareModelDAO;
 import org.openmrs.module.caremodels.api.db.CareModelMemberDAO;
 import org.openmrs.module.caremodels.api.db.EnrollmentReconciliationDAO;
 import org.openmrs.module.caremodels.config.StorageEnvelope;
+import org.openmrs.module.caremodels.config.StorageEnvelopeCache;
 import org.openmrs.module.caremodels.dto.EnrollmentReconciliationResult;
 import org.openmrs.module.caremodels.event.EnrollmentRuleEvidenceFactory;
 import org.openmrs.module.caremodels.model.CareModel;
@@ -35,13 +38,36 @@ import org.openmrs.module.caremodels.rule.EnrollmentRuleEngine.Decision;
 import org.openmrs.module.caremodels.rule.EnrollmentRuleEngine.RuleEvaluation;
 import org.openmrs.module.caremodels.rule.RuleEvidence;
 import org.openmrs.module.caremodels.rule.RuleEvidenceProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 public class CareModelReconciliationServiceImpl extends BaseOpenmrsService implements CareModelReconciliationService {
+	
+	private static final Logger log = LoggerFactory.getLogger(CareModelReconciliationServiceImpl.class);
 	
 	static final int DEFAULT_LIMIT = 25;
 	
 	static final int MAX_LIMIT = 100;
+	
+	/**
+	 * Outer checkpoint transaction only (cursor decisions + bounded GP writes); it holds the
+	 * checkpoint row lock for the batch while each patient's evaluation commits in its own
+	 * REQUIRES_NEW transaction, so one slow or failing patient cannot void the whole batch.
+	 */
+	private static final int CHECKPOINT_TIMEOUT_SECONDS = 600;
+	
+	/** Evidence evaluation per patient; an individual patient can never wedge the batch. */
+	private static final int PATIENT_TIMEOUT_SECONDS = 30;
+	
+	/**
+	 * Default look-back for candidate gating ({@code caremodels.reconciliation.activityWindowDays}
+	 * ).
+	 */
+	static final int DEFAULT_ACTIVITY_WINDOW_DAYS = 90;
 	
 	private EnrollmentReconciliationDAO reconciliationDAO;
 	
@@ -60,6 +86,10 @@ public class CareModelReconciliationServiceImpl extends BaseOpenmrsService imple
 	private CareModelEnrollmentService enrollmentService;
 	
 	private ObjectMapper objectMapper = new ObjectMapper();
+	
+	private StorageEnvelopeCache envelopeCache = new StorageEnvelopeCache();
+	
+	private PlatformTransactionManager transactionManager;
 	
 	public void setReconciliationDAO(EnrollmentReconciliationDAO reconciliationDAO) {
 		this.reconciliationDAO = reconciliationDAO;
@@ -85,44 +115,168 @@ public class CareModelReconciliationServiceImpl extends BaseOpenmrsService imple
 		this.objectMapper = objectMapper;
 	}
 	
-	@Override @Transactional(timeout = 30)
-    public int reconcileNextBatch(int limit) {
-        if (limit < 1 || limit > 100) throw new IllegalArgumentException("Batch size must be 1..100");
-        org.openmrs.api.AdministrationService admin = Context.getAdministrationService();
-        GlobalProperty checkpoint = careModelDAO.getReconciliationCursorForUpdate();
-        if (checkpoint == null) {
-            admin.saveGlobalProperty(new GlobalProperty("caremodels.reconciliation.cursor", "{}"));
-            checkpoint = careModelDAO.getReconciliationCursorForUpdate();
-        }
-        if (checkpoint == null) throw new APIException("Reconciliation checkpoint unavailable");
-        try {
-            JsonNode stored = objectMapper.readTree(checkpoint.getPropertyValue());
-            if (stored == null || !stored.isObject()) throw new APIException("Invalid reconciliation checkpoint");
-            ObjectNode cursor = (ObjectNode) stored;
-            int modelId = cursor.path("modelId").asInt(0);
-            CareModel model = modelId == 0 || cursor.path("completed").asBoolean() ? null : careModelDAO.getCareModelById(modelId);
-            if (model == null || Boolean.TRUE.equals(model.getRetired()) || model.getStatus() != CareModel.CareModelStatus.PUBLISHED) {
-                List<CareModel> models = careModelDAO.getEnrollmentModelsAfter(modelId, 1);
-                if (models.isEmpty()) { checkpoint.setPropertyValue("{}"); admin.saveGlobalProperty(checkpoint); return 0; }
-                model = models.get(0); cursor = objectMapper.createObjectNode().put("modelId", model.getId());
-            }
-            StorageEnvelope.PublishedSnapshot published = StorageEnvelope.fromJson(objectMapper, model.getConfiguration()).getPublished();
-            if (published == null) throw new APIException("Published model snapshot unavailable");
-            if (!published.getChecksum().equals(cursor.path("checksum").asText())) {
-                cursor.put("patientId", 0).put("checksum", published.getChecksum()).put("asOf", System.currentTimeMillis())
-                    .put("upperPatientId", careModelDAO.getMaximumPatientId()).put("completed", false);
-            }
-            Date asOf = new Date(cursor.path("asOf").asLong());
-            List<Integer> patients = careModelDAO.getPatientIdsAfter(cursor.path("patientId").asInt(), cursor.path("upperPatientId").asInt(), limit);
-            for (Integer patientId : patients) {
-                reconcileModel(patientId, model, published, asOf);
-                cursor.put("patientId", patientId);
-            }
-            if (patients.size() < limit) cursor.put("completed", true);
-            checkpoint.setPropertyValue(cursor.toString()); admin.saveGlobalProperty(checkpoint);
-            return patients.size();
-        } catch (java.io.IOException | ClassCastException e) { throw new APIException("Invalid reconciliation checkpoint; reset it explicitly", e); }
-    }
+	public void setEnvelopeCache(StorageEnvelopeCache envelopeCache) {
+		this.envelopeCache = envelopeCache;
+	}
+	
+	public void setTransactionManager(PlatformTransactionManager transactionManager) {
+		this.transactionManager = transactionManager;
+	}
+	
+	/**
+	 * Explicit transaction orchestration instead of one batch-wide transaction: the checkpoint
+	 * transaction (row lock + cursor writes) survives the whole batch, while every patient's
+	 * evidence evaluation and enrollment writes commit independently with its own timeout. A failed
+	 * patient is logged with a full stack trace, excluded from the continuation cursor and retried
+	 * on the next run; already-completed patients in this batch keep their commits. Without a
+	 * transaction manager (unit tests), the batch runs inline.
+	 */
+	@Override
+	public int reconcileNextBatch(int limit) {
+		if (limit < 1 || limit > 100) throw new IllegalArgumentException("Batch size must be 1..100");
+		final int[] processed = { 0 };
+		if (transactionManager == null) {
+			runBatch(limit, processed);
+		} else {
+			newCheckpointTemplate().execute(status -> {
+				runBatch(limit, processed);
+				return null;
+			});
+		}
+		return processed[0];
+	}
+	
+	private void runBatch(int limit, int[] processed) {
+		org.openmrs.api.AdministrationService admin = Context.getAdministrationService();
+		GlobalProperty checkpoint = careModelDAO.getReconciliationCursorForUpdate();
+		if (checkpoint == null) {
+			admin.saveGlobalProperty(new GlobalProperty("caremodels.reconciliation.cursor", "{}"));
+			checkpoint = careModelDAO.getReconciliationCursorForUpdate();
+		}
+		if (checkpoint == null)
+			throw new APIException("Reconciliation checkpoint unavailable");
+		JsonNode stored;
+		try {
+			stored = objectMapper.readTree(checkpoint.getPropertyValue());
+		}
+		catch (java.io.IOException e) {
+			throw new APIException("Invalid reconciliation checkpoint; reset it explicitly", e);
+		}
+		if (stored == null || !stored.isObject())
+			throw new APIException("Invalid reconciliation checkpoint");
+		ObjectNode cursor = (ObjectNode) stored;
+		int modelId = cursor.path("modelId").asInt(0);
+		CareModel model = modelId == 0 || cursor.path("completed").asBoolean() ? null : careModelDAO
+		        .getCareModelById(modelId);
+		if (model == null || Boolean.TRUE.equals(model.getRetired())
+		        || model.getStatus() != CareModel.CareModelStatus.PUBLISHED) {
+			List<CareModel> models = careModelDAO.getEnrollmentModelsAfter(modelId, 1);
+			if (models.isEmpty()) {
+				checkpoint.setPropertyValue("{}");
+				admin.saveGlobalProperty(checkpoint);
+				return;
+			}
+			model = models.get(0);
+			cursor = objectMapper.createObjectNode().put("modelId", model.getId());
+		}
+		StorageEnvelope.PublishedSnapshot published = envelopeCache.get(model.getId(), model.getConfiguration())
+		        .getPublished();
+		if (published == null)
+			throw new APIException("Published model snapshot unavailable");
+		if (!published.getChecksum().equals(cursor.path("checksum").asText())) {
+			cursor.put("patientId", 0).put("checksum", published.getChecksum()).put("asOf", System.currentTimeMillis())
+			        .put("upperPatientId", careModelDAO.getMaximumPatientId()).put("completed", false);
+		}
+		Date asOf = new Date(cursor.path("asOf").asLong());
+		int afterPatientId = cursor.path("patientId").asInt();
+		int upperPatientId = cursor.path("upperPatientId").asInt();
+		List<Integer> patients = selectCandidatePatients(afterPatientId, upperPatientId, asOf, limit);
+		final CareModel batchModel = model;
+		final StorageEnvelope.PublishedSnapshot batchPublished = published;
+		final Date batchAsOf = asOf;
+		for (Integer patientId : patients) {
+			try {
+				evaluatePatientInNewTransaction(patientId, batchModel, batchPublished, batchAsOf);
+			}
+			catch (RuntimeException e) {
+				// Full stack trace: this loop retries the same patient on every run, so the
+				// cause must be diagnosable from the log alone.
+				log.warn("Reconciliation failed for patient {} in model {}; cursor retained for retry", patientId,
+				    batchModel.getCode(), e);
+				break;
+			}
+			cursor.put("patientId", patientId);
+			checkpoint.setPropertyValue(cursor.toString());
+			admin.saveGlobalProperty(checkpoint);
+			processed[0]++;
+		}
+		if (patients.size() < limit)
+			cursor.put("completed", true);
+		checkpoint.setPropertyValue(cursor.toString());
+		admin.saveGlobalProperty(checkpoint);
+	}
+	
+	/**
+	 * One patient's evaluation commits in its own REQUIRES_NEW transaction; inline without a
+	 * manager.
+	 */
+	private void evaluatePatientInNewTransaction(Integer patientId, CareModel model,
+	        StorageEnvelope.PublishedSnapshot published, Date asOf) {
+		if (transactionManager == null) {
+			reconcileModel(patientId, model, published, asOf);
+			return;
+		}
+		newPatientTemplate().execute(tx -> {
+			reconcileModel(patientId, model, published, asOf);
+			return null;
+		});
+	}
+	
+	/**
+	 * Candidates for one batch: patients with clinical activity inside the configured look-back
+	 * window when {@code caremodels.reconciliation.activityWindowDays} is set; the full population
+	 * when the window is 0. A window-bounded cycle intentionally finishes early — patients without
+	 * activity older than the window cannot have a recent missed event to recover.
+	 */
+	private List<Integer> selectCandidatePatients(int afterPatientId, int upperPatientId, Date asOf, int limit) {
+		int windowDays = DEFAULT_ACTIVITY_WINDOW_DAYS;
+		try {
+			String configured = Context.getAdministrationService().getGlobalProperty(
+			    "caremodels.reconciliation.activityWindowDays", String.valueOf(DEFAULT_ACTIVITY_WINDOW_DAYS));
+			windowDays = Integer.parseInt(configured.trim());
+		}
+		catch (RuntimeException e) {
+			// unconfigured or unreadable property: use the default window
+			windowDays = DEFAULT_ACTIVITY_WINDOW_DAYS;
+		}
+		if (windowDays < 0 || windowDays > 3650) {
+			log.warn("Invalid caremodels.reconciliation.activityWindowDays ({}); using default {}", windowDays,
+			    DEFAULT_ACTIVITY_WINDOW_DAYS);
+			windowDays = DEFAULT_ACTIVITY_WINDOW_DAYS;
+		}
+		if (windowDays == 0) {
+			return careModelDAO.getPatientIdsAfter(afterPatientId, upperPatientId, limit);
+		}
+		Date activeSince = new Date(asOf.getTime() - windowDays * 86400000L);
+		return careModelDAO.getActivePatientIdsAfter(afterPatientId, upperPatientId, activeSince, limit);
+	}
+	
+	private TransactionTemplate newCheckpointTemplate() {
+		if (transactionManager == null) {
+			throw new APIException("Reconciliation transaction manager is not configured");
+		}
+		TransactionTemplate template = new TransactionTemplate(transactionManager);
+		template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		template.setTimeout(CHECKPOINT_TIMEOUT_SECONDS);
+		return template;
+	}
+	
+	private TransactionTemplate newPatientTemplate() {
+		TransactionTemplate template = new TransactionTemplate(transactionManager);
+		template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		template.setTimeout(PATIENT_TIMEOUT_SECONDS);
+		return template;
+	}
 	
 	/** Caller-managed scan: a failed patient is not included in the continuation cursor. */
 	@Override
@@ -139,6 +293,16 @@ public class CareModelReconciliationServiceImpl extends BaseOpenmrsService imple
 		// Avoid an unbounded cross-product in an administrator request.
 		if (models.size() > MAX_LIMIT)
 			throw new APIException("Use scheduled reconciliation when more than 100 models are published");
+		// Parse each model's envelope ONCE for the whole batch, before the patient loop; parsed
+		// trees come from the shared cache and are read-only here.
+		Map<Integer, StorageEnvelope.PublishedSnapshot> publishedByModelId = new HashMap<Integer, StorageEnvelope.PublishedSnapshot>();
+		for (CareModel model : models) {
+			StorageEnvelope.PublishedSnapshot published = envelopeCache.get(model.getId(), model.getConfiguration())
+			        .getPublished();
+			if (published == null || published.getDefinition() == null)
+				throw new APIException("Published model snapshot unavailable for model '" + model.getCode() + "'");
+			publishedByModelId.put(model.getId(), published);
+		}
 		Date effectiveAt = asOf == null ? new Date() : new Date(asOf.getTime());
 		EnrollmentReconciliationResult result = new EnrollmentReconciliationResult();
 		result.setNextAfterPatientId(cursor);
@@ -147,13 +311,7 @@ public class CareModelReconciliationServiceImpl extends BaseOpenmrsService imple
 			Integer patientId = candidates.get(i);
 			for (CareModel model : models) {
 				result.setEvaluatedModels(result.getEvaluatedModels() + 1);
-				// Fail the request rather than continuing with a possibly poisoned Hibernate session.
-				// No continuation response is returned; replay starts from the caller's previous cursor.
-				StorageEnvelope.PublishedSnapshot published = StorageEnvelope.fromJson(objectMapper,
-				    model.getConfiguration()).getPublished();
-				if (published == null || published.getDefinition() == null)
-					throw new APIException("Published model snapshot unavailable");
-				if (reconcileModel(patientId, model, published, effectiveAt))
+				if (reconcileModel(patientId, model, publishedByModelId.get(model.getId()), effectiveAt))
 					result.setAppliedDecisions(result.getAppliedDecisions() + 1);
 			}
 			result.setNextAfterPatientId(patientId);

@@ -47,8 +47,11 @@ public class ReconciliationRecoveryTest {
         envelope.saveDraft(mapper.readTree("{\"enrollment\":{\"enabled\":true,\"rules\":[{\"id\":\"eligible\",\"action\":\"AUTO_ENROLL\",\"expression\":{\"type\":\"observation\",\"alias\":\"fact\",\"operator\":\"EXISTS\"}}]}}"), 0).publishDraft("1.0.0", 1, new Date());
         model = new CareModel(); model.setId(3); model.setStatus(CareModel.CareModelStatus.PUBLISHED); model.setConfiguration(envelope.toJson(mapper));
         when(dao.getEnrollmentModelsAfter(0, 1)).thenReturn(Collections.singletonList(model)); when(dao.getCareModelById(3)).thenReturn(model);
-        when(dao.getMaximumPatientId()).thenReturn(2); when(dao.getPatientIdsAfter(0, 2, 1)).thenReturn(Collections.singletonList(1));
-        when(dao.getPatientIdsAfter(1, 2, 1)).thenReturn(Collections.singletonList(2)); when(dao.getPatientIdsAfter(2, 2, 1)).thenReturn(Collections.emptyList());
+        when(dao.getMaximumPatientId()).thenReturn(2);
+        when(admin.getGlobalProperty(eq("caremodels.reconciliation.activityWindowDays"), anyString())).thenReturn("90");
+        when(dao.getActivePatientIdsAfter(eq(0), eq(2), any(), eq(1))).thenReturn(Collections.singletonList(1));
+        when(dao.getActivePatientIdsAfter(eq(1), eq(2), any(), eq(1))).thenReturn(Collections.singletonList(2));
+        when(dao.getActivePatientIdsAfter(eq(2), eq(2), any(), eq(1))).thenReturn(Collections.emptyList());
         when(members.getNextEpisodeNumber(anyInt(), eq(3))).thenReturn(1);
         when(evidence.create(anyInt(), any(), any())).thenReturn((type, alias) -> RuleEvidence.present(true));
         recovery = new CareModelReconciliationServiceImpl(); recovery.setCareModelDAO(dao); recovery.setMemberDAO(members); recovery.setEnrollmentService(enrollment); recovery.setEvidenceFactory(evidence);
@@ -75,16 +78,15 @@ public class ReconciliationRecoveryTest {
 	}
 	
 	@Test
-	public void failedPersistenceMustNotAdvanceTheCheckpointAndRetryMustUseSameSource() {
+	public void failedPersistenceMustNotAdvanceTheCheckpointAndRetryMustUseSameSource() throws Exception {
 		doThrow(new APIException("temporary failure")).doReturn(null).when(enrollment)
 		        .applyBackfillEnrollment(anyInt(), eq(3), anyString(), any(), anyString(), any());
-		try {
-			recovery.reconcileNextBatch(1);
-			fail();
-		}
-		catch (APIException expected) {}
-		assertEquals("{}", cursor.getPropertyValue());
+		// The failed patient is logged and excluded from the cursor (patientId stays at the start
+		// of the model page); the batch itself does not abort.
+		assertEquals(0, recovery.reconcileNextBatch(1));
+		assertEquals(0, mapper.readTree(cursor.getPropertyValue()).path("patientId").asInt());
 		recovery.reconcileNextBatch(1);
+		assertEquals(1, mapper.readTree(cursor.getPropertyValue()).path("patientId").asInt());
 		org.mockito.ArgumentCaptor<String> source = org.mockito.ArgumentCaptor.forClass(String.class);
 		verify(enrollment, times(2)).applyBackfillEnrollment(eq(1), eq(3), eq("eligible"), any(), source.capture(), any());
 		assertEquals(source.getAllValues().get(0), source.getAllValues().get(1));
@@ -92,8 +94,11 @@ public class ReconciliationRecoveryTest {
 	
 	@Test public void unavailableEvidenceMustRetryWhileKnownAbsenceMustAllowProgress() throws Exception {
         when(evidence.create(anyInt(), any(), any())).thenReturn((type, alias) -> RuleEvidence.unknown());
-        try { recovery.reconcileNextBatch(1); fail(); } catch (APIException expected) { }
-        assertEquals("{}", cursor.getPropertyValue()); verifyNoInteractions(enrollment);
+        // Unavailable evidence stops the batch; the checkpoint keeps the model page at its first
+        // patient so the next run retries exactly the same page.
+        assertEquals(0, recovery.reconcileNextBatch(1));
+        assertEquals(0, mapper.readTree(cursor.getPropertyValue()).path("patientId").asInt());
+        verifyNoInteractions(enrollment);
         when(evidence.create(anyInt(), any(), any())).thenReturn((type, alias) -> RuleEvidence.absent());
         assertEquals(1, recovery.reconcileNextBatch(1)); verifyNoInteractions(enrollment);
     }
@@ -109,7 +114,17 @@ public class ReconciliationRecoveryTest {
 		model.setConfiguration(envelope.toJson(mapper));
 		recovery.reconcileNextBatch(1);
 		assertEquals(1, mapper.readTree(cursor.getPropertyValue()).path("patientId").asInt());
-		verify(dao, times(2)).getPatientIdsAfter(0, 2, 1);
+		verify(dao, times(2)).getActivePatientIdsAfter(eq(0), eq(2), any(), eq(1));
+	}
+	
+	@Test
+	public void disabledActivityWindowMustFallBackToTheFullPopulationScan() throws Exception {
+		when(admin.getGlobalProperty(eq("caremodels.reconciliation.activityWindowDays"), anyString())).thenReturn("0");
+		when(dao.getPatientIdsAfter(0, 2, 1)).thenReturn(Collections.singletonList(1));
+		assertEquals(1, recovery.reconcileNextBatch(1));
+		assertEquals(1, mapper.readTree(cursor.getPropertyValue()).path("patientId").asInt());
+		verify(dao).getPatientIdsAfter(0, 2, 1);
+		verify(dao, never()).getActivePatientIdsAfter(anyInt(), anyInt(), any(), anyInt());
 	}
 	
 	@Test(expected = IllegalArgumentException.class)

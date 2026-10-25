@@ -18,6 +18,13 @@ public final class SourceContract {
 	
 	private static final org.openmrs.module.caremodels.config.JsonSchemaValidator SCHEMAS = new org.openmrs.module.caremodels.config.JsonSchemaValidator();
 	
+	/**
+	 * Compiled registered-resolver schemas, keyed by schema node identity: resolver instances are
+	 * singletons with immutable contracts, so compiling per request would dominate the data path.
+	 */
+	private static final Map<JsonNode, com.networknt.schema.JsonSchema> COMPILED_SCHEMAS = Collections
+	        .synchronizedMap(new java.util.IdentityHashMap<JsonNode, com.networknt.schema.JsonSchema>());
+	
 	private SourceContract() {
 	}
 	
@@ -96,8 +103,9 @@ public final class SourceContract {
 			result.addError(path, "Registered schema is unavailable");
 			return result;
 		}
-		com.networknt.schema.JsonSchema validator = com.networknt.schema.JsonSchemaFactory.getInstance(
-		    com.networknt.schema.SpecVersion.VersionFlag.V202012).getSchema(schema);
+		com.networknt.schema.JsonSchema validator = COMPILED_SCHEMAS.computeIfAbsent(schema,
+		    s -> com.networknt.schema.JsonSchemaFactory.getInstance(com.networknt.schema.SpecVersion.VersionFlag.V202012)
+		            .getSchema(s));
 		for (com.networknt.schema.ValidationMessage error : validator.validate(value))
 			result.addError(path + error.getPath(), error.getMessage());
 		return result;

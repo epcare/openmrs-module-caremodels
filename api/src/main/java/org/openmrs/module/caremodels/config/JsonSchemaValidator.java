@@ -97,21 +97,25 @@ public class JsonSchemaValidator {
 		return schemaFactory.getSchema(uri);
 	}
 	
-	/** Maps {@link #SCHEMA_BASE_URI} onto classpath resources under /schemas/. */
+	/**
+	 * Maps {@link #SCHEMA_BASE_URI} onto classpath resources under /schemas/. Every other URI is
+	 * refused: schema documents are bundled with the build and never fetched over the network, so a
+	 * remote $ref in any processed schema can never trigger a server-side outbound request.
+	 */
 	private class ClasspathSchemaUriFetcher implements com.networknt.schema.uri.URIFetcher {
 		
 		@Override
 		public InputStream fetch(URI uri) throws IOException {
 			String uriString = uri.toString();
-			if (uriString.startsWith(SCHEMA_BASE_URI)) {
-				String resource = "/schemas/" + uriString.substring(SCHEMA_BASE_URI.length());
-				InputStream stream = JsonSchemaValidator.class.getResourceAsStream(resource);
-				if (stream != null) {
-					return stream;
-				}
-				throw new IOException("Schema resource not found on classpath: " + resource);
+			if (!uriString.startsWith(SCHEMA_BASE_URI)) {
+				throw new IOException("Refusing to fetch schema from a non-classpath location: " + uriString);
 			}
-			return uri.toURL().openStream();
+			String resource = "/schemas/" + uriString.substring(SCHEMA_BASE_URI.length());
+			InputStream stream = JsonSchemaValidator.class.getResourceAsStream(resource);
+			if (stream != null) {
+				return stream;
+			}
+			throw new IOException("Schema resource not found on classpath: " + resource);
 		}
 	}
 }

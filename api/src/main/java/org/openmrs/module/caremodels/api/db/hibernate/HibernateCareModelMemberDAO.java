@@ -148,6 +148,14 @@ public class HibernateCareModelMemberDAO implements CareModelMemberDAO {
 		return (Long) criteria.uniqueResult();
 	}
 	
+	@Override
+	public long countMembersForModel(Integer careModelId) {
+		// includes voided episodes: purge destroys the audit trail, not just current memberships
+		Integer count = (Integer) sessionFactory.getCurrentSession().createCriteria(CareModelMember.class)
+		        .add(Restrictions.eq("careModelId", careModelId)).setProjection(Projections.rowCount()).uniqueResult();
+		return count == null ? 0L : count.longValue();
+	}
+	
 	private Criteria buildPatientStatusCriteria(Integer patientId, MemberStatus status, boolean includeVoided) {
 		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(CareModelMember.class);
 		criteria.add(Restrictions.eq("patientId", patientId));

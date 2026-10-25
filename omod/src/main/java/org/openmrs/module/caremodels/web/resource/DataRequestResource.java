@@ -76,23 +76,25 @@ public class DataRequestResource extends DelegatingCrudResource<DataRequestResul
 			throw new APIException("Data source is not declared in the requested tab");
 		}
 		
-		// 3. validate the stored source, resolve its typed resource alias and invoke registered code
-		org.openmrs.module.caremodels.config.ValidationResult validation = org.openmrs.module.caremodels.resolver.SourceContract
-		        .validate(source, resolvers, "$.dataSource");
-		if (!validation.isValid())
-			throw new APIException(validation.toString());
-		String resolverId = org.openmrs.module.caremodels.resolver.SourceContract.resolverId(source);
-		DataResolver resolver = resolvers.getResolver(resolverId);
-		if (resolver == null) {
-			throw new APIException("No resolver is registered for data source type: " + resolverId);
-		}
-		String referenceUuid = resolver.getReferenceKind() == null ? null : access.getPublishedDefinition()
-		        .path("terminology").path(resolver.getReferenceKind())
+		// 3. resolve the typed resource alias, then delegate to the registry, which performs the
+		// single full validation (source schema + registered resolver) and result validation
+		DataResolver resolver = resolvers.getResolver(org.openmrs.module.caremodels.resolver.SourceContract
+		        .resolverId(source));
+		String referenceUuid = resolver == null || resolver.getReferenceKind() == null ? null : access
+		        .getPublishedDefinition().path("terminology").path(resolver.getReferenceKind())
 		        .path(source.path(resolver.getReferenceField()).asText()).asText(null);
-		if (resolver.getReferenceKind() != null && referenceUuid == null)
+		if (resolver != null && resolver.getReferenceKind() != null && referenceUuid == null) {
 			throw new APIException("Resource alias is unavailable");
+		}
 		
-		JsonNode result = resolvers.resolve(resolverId, patientIdFor(access.getPatientUuid()), source, referenceUuid);
+		JsonNode result;
+		try {
+			result = resolvers.resolve(org.openmrs.module.caremodels.resolver.SourceContract.resolverId(source),
+			    patientIdFor(access.getPatientUuid()), source, referenceUuid);
+		}
+		catch (IllegalArgumentException e) {
+			throw new APIException(e.getMessage(), e);
+		}
 		
 		DataRequestResult response = new DataRequestResult();
 		response.setModelCode(access.getModelCode());
@@ -173,13 +175,5 @@ public class DataRequestResource extends DelegatingCrudResource<DataRequestResul
 	@Override
 	public String getResourceVersion() {
 		return "1.0";
-	}
-	
-	private static String trimToNull(String value) {
-		if (value == null) {
-			return null;
-		}
-		String trimmed = value.trim();
-		return trimmed.isEmpty() ? null : trimmed;
 	}
 }
