@@ -17,9 +17,9 @@
 	<url>https://wiki.openmrs.org/</url>
 
 	<scm>
-		<connection>scm:git:git@github.com:openmrs/openmrs-module-caremodels.git</connection>
-		<developerConnection>scm:git:git@github.com:openmrs/openmrs-module-caremodels.git</developerConnection>
-		<url>https://github.com/openmrs/openmrs-module-caremodels/</url>
+		<connection>scm:git:git@github.com:epcare/openmrs-module-caremodels.git</connection>
+		<developerConnection>scm:git:git@github.com:epcare/openmrs-module-caremodels.git</developerConnection>
+		<url>https://github.com/epcare/openmrs-module-caremodels/</url>
 		<tag>HEAD</tag>
 	</scm>
 
