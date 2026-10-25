@@ -311,6 +311,17 @@
       "widgetType": "set-history-trends",
       "componentVersion": "1.0.0",
       "newRendererEnabledByThisRelease": false
+    },
+    {
+      "catalogId": 28,
+      "label": "Clinical Notes",
+      "backend": "Implemented/tested observation source",
+      "limitation": "text values verbatim with dates; no author attribution (not recorded on obs)",
+      "frontendIntegrationVerified": false,
+      "liveHttpVerified": false,
+      "widgetType": "notes-list",
+      "componentVersion": "1.0.0",
+      "newRendererEnabledByThisRelease": false
     }
   ]
 }

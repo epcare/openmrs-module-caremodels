@@ -39,7 +39,24 @@ public class CareModelsActivator extends BaseModuleActivator {
 		}
 		if (Boolean.TRUE.equals(task.getStartOnStartup()))
 			scheduler.scheduleIfNotRunning(task);
+		importShippedCareModels();
 		log.info("Started Care Models");
+	}
+	
+	/**
+	 * Imports shipped care model definitions from {app data dir}/configuration/caremodel/ when
+	 * present. Failures are logged and isolated per file; a broken content pack can never prevent
+	 * module startup.
+	 */
+	private void importShippedCareModels() {
+		try {
+			new org.openmrs.module.caremodels.config.CareModelConfigImporter(
+			        org.openmrs.api.context.Context.getService(org.openmrs.module.caremodels.api.CareModelService.class))
+			        .importShippedModels();
+		}
+		catch (Exception e) {
+			log.error("Unable to run the shipped care model configuration import", e);
+		}
 	}
 	
 	/**

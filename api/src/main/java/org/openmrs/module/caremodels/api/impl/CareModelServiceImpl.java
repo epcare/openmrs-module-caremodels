@@ -23,6 +23,7 @@ import org.openmrs.module.caremodels.api.CareModelService;
 import org.openmrs.module.caremodels.api.db.CareModelDAO;
 import org.openmrs.module.caremodels.config.JsonSchemaValidator;
 import org.openmrs.module.caremodels.config.OpenmrsReferenceChecker;
+import org.openmrs.module.caremodels.config.SemVer;
 import org.openmrs.module.caremodels.config.SemanticValidator;
 import org.openmrs.module.caremodels.config.StorageEnvelope;
 import org.openmrs.module.caremodels.config.StorageEnvelopeValidator;
@@ -309,6 +310,52 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 		if (dao.getCareModelByCode(code) != null) {
 			throw new APIException("A Care Model with code '" + code + "' already exists");
 		}
+		StorageEnvelope envelope = validatedEnvelope(privilege, envelopeJson);
+		
+		CareModel model = new CareModel();
+		model.setCode(code.trim());
+		model.setName(name);
+		model.setPrivilege(privilege);
+		model.setStatus(envelope.getPublished() != null ? CareModelStatus.PUBLISHED : CareModelStatus.DRAFT);
+		writeEnvelope(model, envelope);
+		return dao.saveCareModel(model);
+	}
+	
+	@Override
+	@Transactional
+	public CareModel importShippedModel(String code, String name, String privilege, String envelopeJson) throws APIException {
+		if (code == null || code.trim().isEmpty()) {
+			throw new APIException("Care Model code is required");
+		}
+		StorageEnvelope shipped = validatedEnvelope(privilege, envelopeJson);
+		
+		CareModel existing = dao.getCareModelByCode(code);
+		if (existing == null) {
+			CareModel model = new CareModel();
+			model.setCode(code.trim());
+			applyShipped(model, name, privilege, shipped);
+			writeEnvelope(model, shipped);
+			return dao.saveCareModel(model);
+		}
+		
+		StorageEnvelope current = readEnvelope(existing);
+		if (!shippedIsNewer(shipped, current)) {
+			log.info("Skipping shipped care model '" + code + "': stored definition is at version "
+			        + publishedVersionOf(current) + ", shipped version is " + publishedVersionOf(shipped));
+			return null;
+		}
+		
+		// a shipped upgrade is authoritative at its version: refresh metadata alongside the envelope
+		existing = dao.getCareModelByCodeForUpdate(code);
+		applyShipped(existing, name, privilege, shipped);
+		writeEnvelope(existing, shipped);
+		return dao.saveCareModel(existing);
+	}
+	
+	/**
+	 * Runs the full import validation chain: schema, envelope integrity, every embedded definition.
+	 */
+	private StorageEnvelope validatedEnvelope(String privilege, String envelopeJson) {
 		assertPrivilegePresent(privilege);
 		
 		ValidationResult result = schemaValidator.validate(envelopeJson, JsonSchemaValidator.SchemaType.STORAGE_ENVELOPE);
@@ -344,14 +391,32 @@ public class CareModelServiceImpl extends BaseOpenmrsService implements CareMode
 				throw new APIException("Imported history[" + i + "] definition is invalid: " + historyResult);
 			}
 		}
-		
-		CareModel model = new CareModel();
-		model.setCode(code.trim());
+		return envelope;
+	}
+	
+	/**
+	 * A shipped envelope may only replace a stored model when its published version is strictly
+	 * newer: draft-only shipped envelopes never upgrade an existing model, and models never
+	 * published locally accept any shipped published snapshot.
+	 */
+	static boolean shippedIsNewer(StorageEnvelope shipped, StorageEnvelope current) {
+		if (shipped == null || shipped.getPublished() == null) {
+			return false;
+		}
+		if (current == null || current.getPublished() == null) {
+			return true;
+		}
+		return SemVer.compare(shipped.getPublished().getVersion(), current.getPublished().getVersion()) > 0;
+	}
+	
+	private static String publishedVersionOf(StorageEnvelope envelope) {
+		return envelope != null && envelope.getPublished() != null ? envelope.getPublished().getVersion() : "none";
+	}
+	
+	private static void applyShipped(CareModel model, String name, String privilege, StorageEnvelope shipped) {
 		model.setName(name);
 		model.setPrivilege(privilege);
-		model.setStatus(envelope.getPublished() != null ? CareModelStatus.PUBLISHED : CareModelStatus.DRAFT);
-		writeEnvelope(model, envelope);
-		return dao.saveCareModel(model);
+		model.setStatus(shipped.getPublished() != null ? CareModelStatus.PUBLISHED : CareModelStatus.DRAFT);
 	}
 	
 	@Override

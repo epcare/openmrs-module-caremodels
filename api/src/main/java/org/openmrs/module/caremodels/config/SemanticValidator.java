@@ -382,6 +382,8 @@ public class SemanticValidator {
 		if ((Registry.WIDGET_LATEST_SET_RESULTS.equals(type) || Registry.WIDGET_SET_HISTORY_TRENDS.equals(type))
 		        && !Registry.DS_OBSERVATION_SET.equals(id))
 			result.addError(path + ".dataSource", "Set widgets require a grouped observation-set source");
+		if (Registry.WIDGET_NOTES_LIST.equals(type) && (!observation || !"STRING".equals(resultType)))
+			result.addError(path + ".dataSource", "Notes require a text observation source");
 		String required = null;
 		if ("condition-list".equals(type) && !"conditions".equals(id) && !"encounter-diagnoses".equals(id))
 			required = "conditions or encounter-diagnoses";

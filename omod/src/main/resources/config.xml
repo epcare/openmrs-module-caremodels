@@ -43,6 +43,32 @@
 		</description>
 	</globalProperty>
 
+	<globalProperty>
+		<property>caremodels.reconciliation.enabled</property>
+		<defaultValue>true</defaultValue>
+		<description>
+			Master switch for the care models enrollment reconciliation task (bounded missed-event
+			recovery). Set to false to suspend recovery batches without stopping the scheduler.
+		</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>caremodels.reconciliation.batchSize</property>
+		<defaultValue>50</defaultValue>
+		<description>
+			Maximum number of missed enrollment events processed per reconciliation batch run.
+		</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>caremodels.reconciliation.cursor</property>
+		<defaultValue>{}</defaultValue>
+		<description>
+			Reconciliation checkpoint (JSON). Runtime state managed by the reconciliation service;
+			recorded here so OpenMRS registers the property. Do not edit while the scheduler is running.
+		</description>
+	</globalProperty>
+
 	<!-- Filtered clinical writes are dispatched after their transaction commits. -->
 	<advice>
 		<point>org.openmrs.api.ProgramWorkflowService</point>

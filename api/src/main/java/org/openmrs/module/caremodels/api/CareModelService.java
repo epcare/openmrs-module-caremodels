@@ -139,6 +139,19 @@ public interface CareModelService extends OpenmrsService {
 	@Authorized(CareModelsPrivileges.MANAGE_CARE_MODELS)
 	CareModel importModel(String code, String name, String privilege, String envelopeJson) throws APIException;
 	
+	/**
+	 * Version-gated content-pack import used at startup: creates the model when its code is absent,
+	 * and replaces the stored envelope only when the shipped envelope's published version is
+	 * strictly newer than the stored published version — internal improvements published at an
+	 * equal or higher version are never overwritten. Returns the saved model, or null when the
+	 * shipped envelope was skipped (not newer, or draft-only against an existing model). The
+	 * envelope and every embedded definition are validated exactly as in
+	 * {@link #importModel(String, String, String, String)}.
+	 */
+	@Transactional
+	@Authorized(CareModelsPrivileges.MANAGE_CARE_MODELS)
+	CareModel importShippedModel(String code, String name, String privilege, String envelopeJson) throws APIException;
+	
 	/** PUBLISHED → INACTIVE; an inactive model never appears on patient tabs. */
 	@Transactional
 	@Authorized(CareModelsPrivileges.MANAGE_CARE_MODELS)

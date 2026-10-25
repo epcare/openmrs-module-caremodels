@@ -43,6 +43,8 @@ public final class Registry {
 	
 	public static final String WIDGET_SET_HISTORY_TRENDS = "set-history-trends";
 	
+	public static final String WIDGET_NOTES_LIST = "notes-list";
+	
 	// ========================
 	// Action handler types (allowlisted)
 	// ========================
@@ -84,7 +86,7 @@ public final class Registry {
 	public static final Set<String> WIDGET_TYPES = unmodifiable(WIDGET_METRIC, WIDGET_TREND_CHART, WIDGET_CLINICAL_TABLE,
 	    WIDGET_TIMELINE, WIDGET_FORM_LAUNCHER, WIDGET_ACTION_PANEL, "text-note", "section-heading", "divider", "spacer",
 	    "static-callout", "condition-list", "medication-summary", "program-summary", "patient-summary", "care-plan",
-	    WIDGET_LATEST_SET_RESULTS, WIDGET_SET_HISTORY_TRENDS);
+	    WIDGET_LATEST_SET_RESULTS, WIDGET_SET_HISTORY_TRENDS, WIDGET_NOTES_LIST);
 	
 	public static final Set<String> ACTION_TYPES = unmodifiable(ACTION_LAUNCH_FORM, ACTION_NAVIGATE_INTERNAL,
 	    ACTION_OPEN_ORDER_ENTRY, ACTION_OPEN_APPOINTMENTS, ACTION_ENROLLMENT_TRANSITION);
